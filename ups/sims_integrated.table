@@ -1,0 +1,5 @@
+setupRequired(sims_catUtils)
+setupRequired(sims_GalSimInterface)
+setupRequired(obs_lsstSim)
+
+envPrepend(PYTHONPATH, ${PRODUCT_DIR}/python)
