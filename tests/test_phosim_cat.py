@@ -5,6 +5,8 @@ import os
 
 import time
 
+import copy
+
 if __name__ == "__main__":
 
     t_start = time.time()
@@ -14,11 +16,14 @@ if __name__ == "__main__":
                            "OpSimData", "kraken_1042_sqlite.db")
 
     gen = ObservationMetaDataGenerator(database=opsimdb)
-    obs_list = gen.getObservationMetaData(fieldRA=(23.0, 50.0),
-                                          fieldDec=(-43.0, -39.0),
-                                          expMJD=(59580.0, 60000.0))
+    obs_list = gen.getObservationMetaData(fieldRA=(52.9, 53.1),
+                                          fieldDec=(-27.5, -27.3),
+                                          boundLength=0.1,
+                                          telescopeFilter='r')
 
     print len(obs_list)
 
-    CreatePhoSimCatalogs(obs_list[:2], catalog_dir='trial')
+    good_obs = [obs_list[0], obs_list[-1]]
+
+    CreatePhoSimCatalogs(good_obs, catalog_dir='trial')
     print "that took ",time.time()-t_start
