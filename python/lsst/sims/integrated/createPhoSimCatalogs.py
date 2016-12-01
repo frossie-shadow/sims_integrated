@@ -1,11 +1,31 @@
 import os
 from lsst.utils import getPackageDir
-from lsst.sims.integrated import celestial_db_dict
 from lsst.sims.catUtils.baseCatalogModels import GalaxyTileCompoundObj
 from lsst.sims.catUtils.exampleCatalogDefinitions import DefaultPhoSimHeaderMap
 from lsst.sims.catalogs.definitions import CompoundInstanceCatalog
 
+from lsst.sims.catUtils.baseCatalogModels import (StarObj,
+                                                  GalaxyBulgeObj, GalaxyDiskObj,
+                                                  GalaxyAgnObj)
+
+from lsst.sims.catUtils.mixins import VariabilityStars
+from lsst.sims.catUtils.exampleCatalogDefinitions import (PhoSimCatalogPoint,
+                                                          PhoSimCatalogSersic2D,
+                                                          PhoSimCatalogZPoint)
+
+
 __all__ = ["CreatePhoSimCatalogs"]
+
+class VariablePhoSimCatalogPoint(VariabilityStars, PhoSimCatalogPoint):
+    pass
+
+class VariablePhoSimCatalogZPoint(VariabilityStars, PhoSimCatalogZPoint):
+    pass
+
+celestial_db_dict = {'stars': ([StarObj], [VariablePhoSimCatalogPoint]),
+                     'galaxies': ([GalaxyBulgeObj, GalaxyDiskObj],
+                                  [PhoSimCatalogSersic2D, PhoSimCatalogSersic2D]),
+                     'agn': ([GalaxyAgnObj], [VariablePhoSimCatalogZPoint])}
 
 def CreatePhoSimCatalogs(obs_list,
                          celestial_type=('stars', 'galaxies', 'agn'),
