@@ -1,14 +1,24 @@
 import os
+import numpy as np
 from lsst.utils import getPackageDir
 from lsst.sims.catUtils.baseCatalogModels import GalaxyTileCompoundObj
 from lsst.sims.catUtils.exampleCatalogDefinitions import DefaultPhoSimHeaderMap
 from lsst.sims.catalogs.definitions import CompoundInstanceCatalog
 
-from lsst.sims.catUtils.baseCatalogModels import (StarObj,
+from lsst.sims.catalogs.definitions import InstanceCatalog
+from lsst.sims.catalogs.decorators import cached, compound
+from lsst.sims.catalogs.definitions import parallelCatalogWriter
+
+from lsst.sims.catUtils.baseCatalogModels import (BaseCatalogConfig, StarObj,
                                                   GalaxyBulgeObj, GalaxyDiskObj,
                                                   GalaxyAgnObj)
 
 from lsst.sims.catUtils.mixins import VariabilityStars
+from lsst.sims.catUtils.mixins import AstrometryStars, AstrometryGalaxies
+from lsst.sims.catUtils.mixins import PhotometryStars, PhotometryGalaxies
+from lsst.sims.photUtils import Sed
+from lsst.sims.coordUtils import chipNameFromPupilCoordsLSST, pixelCoordsFromPupilCoords
+from lsst.sims.coordUtils import _lsst_camera
 from lsst.sims.catUtils.exampleCatalogDefinitions import (PhoSimCatalogPoint,
                                                           PhoSimCatalogSersic2D,
                                                           PhoSimCatalogZPoint)
@@ -17,9 +27,47 @@ from lsst.sims.catUtils.exampleCatalogDefinitions import (PhoSimCatalogPoint,
 __all__ = ["CreatePhoSimCatalogs"]
 
 class VariablePhoSimCatalogPoint(VariabilityStars, PhoSimCatalogPoint):
-    pass
+    phoSimHeaderMap = DefaultPhoSimHeaderMap
 
 class VariablePhoSimCatalogZPoint(VariabilityStars, PhoSimCatalogZPoint):
+    phoSimHeaderMap = DefaultPhoSimHeaderMap
+
+class PhoSimCatalogSersic2D_header(PhoSimCatalogSersic2D):
+    phoSimHeaderMap = DefaultPhoSimHeaderMap
+
+class ReferenceCatalogBase(object):
+    column_outputs = ['uniqueId', 'obj_type', 'raICRS', 'decICRS', 'magnitude', 'flux',
+                      'chip', 'xpix', 'ypix']
+
+    transformations = {'raICRS': np.degrees, 'decICRS':np.degrees}
+
+    @cached
+    def get_obj_type(self):
+        return np.array([self.db_obj.objid]*len(self.column_by_name('raJ2000')))
+
+    @cached
+    def get_magnitude(self):
+        return self.column_by_name('lsst_%s' % self.obs_metadata.bandpass)
+
+    @cached
+    def get_flux(self):
+        ss = Sed()
+        return ss.fluxFromMag(self.column_by_name('magnitude'))
+
+    @compound('chip', 'xpix', 'ypix')
+    def get_camera_values(self):
+        xpup = self.column_by_name('x_pupil')
+        ypup = self.column_by_name('y_pupil')
+
+        name_list = chipNameFromPupilCoordsLSST(xpup, ypup)
+        xpix, ypix = pixelCoordsFromPupilCoords(xpup, ypup, chipName=name_list, camera=_lsst_camera)
+        return np.array([name_list, xpix, ypix])
+
+
+class StellarReferenceCatalog(ReferenceCatalogBase, AstrometryStars, PhotometryStars, InstanceCatalog):
+    pass
+
+class GalaxyReferenceCatalog(ReferenceCatalogBase, AstrometryGalaxies, InstanceCatalog):
     pass
 
 celestial_db_dict = {'stars': ([StarObj], [VariablePhoSimCatalogPoint]),
@@ -31,11 +79,14 @@ def CreatePhoSimCatalogs(obs_list,
                          celestial_type=('stars', 'galaxies', 'agn'),
                          catalog_dir=None):
 
-    db_class_list = []
-    cat_class_list = []
-    for cc in celestial_type:
-        db_class_list += celestial_db_dict[cc][0]
-        cat_class_list += celestial_db_dict[cc][1]
+    config_name = os.path.join(getPackageDir('sims_integrated'), 'config', 'db.py')
+    config = BaseCatalogConfig()
+    config.load(config_name)
+    for db_class in (StarObj, GalaxyBulgeObj, GalaxyDiskObj, GalaxyAgnObj):
+        db_class.host = config.host
+        db_class.port = config.port
+        db_class.database = config.database
+        db_class.driver = config.driver
 
     pkg_dir = getPackageDir('sims_integrated')
     cat_dir = os.path.join(pkg_dir, 'catalogs')
@@ -45,25 +96,51 @@ def CreatePhoSimCatalogs(obs_list,
             os.mkdir(cat_dir)
 
     cat_name_list = []
-    compound_cat = None
-    connection_list = None
+
     for obs in obs_list:
-        if compound_cat is not None:
-            connection_list = compound_cat._active_connections
+        cat_name = os.path.join(cat_dir, 'phosim_%.5f_cat.txt' % obs.mjd.TAI)
+        ref_name = os.path.join(cat_dir, 'phosim_%.5f_ref.txt' % obs.mjd.TAI)
+        write_header = True
+        write_mode = 'w'
 
-        cat_name = 'phosim_%.5f_cat.txt' % obs.mjd.TAI
+        if 'stars' in celestial_type:
+            db = StarObj()
+            star_cat = VariablePhoSimCatalogPoint(db, obs_metadata=obs)
+            ref_cat = StellarReferenceCatalog(db, obs_metadata=obs)
 
-        compound_cat = CompoundInstanceCatalog(cat_class_list,
-                                               db_class_list,
-                                               obs_metadata=obs,
-                                               compoundDBclass=GalaxyTileCompoundObj)
+            cat_dict = {cat_name: star_cat, ref_name: ref_cat}
 
-        if connection_list is not None:
-            compound_cat._active_connections += connection_list
+            parallelCatalogWriter(cat_dict, chunk_size=100000,
+                                  write_header=write_header, write_mode=write_mode)
+            write_header = False
+            write_mode = 'a'
 
-        compound_cat.phoSimHeaderMap = DefaultPhoSimHeaderMap
+        if 'galaxies' in celestial_type:
 
-        compound_cat.write_catalog(os.path.join(cat_dir, cat_name), chunk_size=1000000)
+            cat_dict = {cat_name: PhoSimCatalogSersic2D_header,
+                        ref_name: GalaxyReferenceCatalog}
+
+            for db in (GalaxyBulgeObj(), GalaxyDiskObj()):
+                gal_cat = PhoSimCatalogSersic2D_header(db, obs_metadata=obs)
+                ref_cat = GalaxyReferenceCatalog(db, obs_metadata=obs)
+
+                cat_dict = {cat_name: gal_cat, ref_name: ref_cat}
+
+                parallelCatalogWriter(cat_dict, chunk_size=100000,
+                                      write_header=write_header, write_mode=write_mode)
+
+                write_header = False
+                write_mode = 'a'
+
+            db = GalaxyAgnObj()
+            agn_cat = VariablePhoSimCatalogZPoint(db, obs_metadata=obs)
+            ref_cat = GalaxyReferenceCatalog(db, obs_metadata=obs)
+            cat_dict = {cat_name: agn_cat,
+                        ref_name: ref_cat}
+
+            parallelCatalogWriter(cat_dict, chunk_size=100000,
+                                  write_header=write_header, write_mode=write_mode)
+
         cat_name_list.append(cat_name)
 
     return cat_name_list
