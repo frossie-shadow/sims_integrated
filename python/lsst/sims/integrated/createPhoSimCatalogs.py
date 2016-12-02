@@ -1,9 +1,7 @@
 import os
 import numpy as np
 from lsst.utils import getPackageDir
-from lsst.sims.catUtils.baseCatalogModels import GalaxyTileCompoundObj
 from lsst.sims.catUtils.exampleCatalogDefinitions import DefaultPhoSimHeaderMap
-from lsst.sims.catalogs.definitions import CompoundInstanceCatalog
 
 from lsst.sims.catalogs.definitions import InstanceCatalog
 from lsst.sims.catalogs.decorators import cached, compound
