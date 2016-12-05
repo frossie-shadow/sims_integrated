@@ -1,9 +1,7 @@
 import os
 import numpy as np
-import time
 from lsst.utils import getPackageDir
 from lsst.sims.catUtils.exampleCatalogDefinitions import DefaultPhoSimHeaderMap
-from lsst.sims.photUtils import cache_LSST_seds
 
 from lsst.sims.catalogs.definitions import InstanceCatalog
 from lsst.sims.catalogs.decorators import cached, compound
@@ -36,23 +34,13 @@ class PhoSimCatalogSersic2D_header(PhoSimCatalogSersic2D):
     phoSimHeaderMap = DefaultPhoSimHeaderMap
 
 class ReferenceCatalogBase(object):
-    column_outputs = ['uniqueId', 'obj_type', 'raICRS', 'decICRS', 'magnitude', 'flux',
-                      'chip', 'xpix', 'ypix']
+    column_outputs = ['uniqueId', 'obj_type', 'raICRS', 'decICRS', 'chip', 'xpix', 'ypix']
 
     transformations = {'raICRS': np.degrees, 'decICRS':np.degrees}
 
     @cached
     def get_obj_type(self):
         return np.array([self.db_obj.objid]*len(self.column_by_name('raJ2000')))
-
-    @cached
-    def get_magnitude(self):
-        return self.column_by_name('lsst_%s' % self.obs_metadata.bandpass)
-
-    @cached
-    def get_flux(self):
-        ss = Sed()
-        return ss.fluxFromMag(self.column_by_name('magnitude'))
 
     @compound('chip', 'xpix', 'ypix')
     def get_camera_values(self):
@@ -68,30 +56,11 @@ class StellarReferenceCatalog(ReferenceCatalogBase, AstrometryStars, PhotometryS
     pass
 
 class GalaxyReferenceCatalog(ReferenceCatalogBase, PhotometryGalaxies, AstrometryGalaxies, InstanceCatalog):
-
-    @cached
-    def get_magnitude(self):
-        bandpass = self.obs_metadata.bandpass
-        name_lower = self.db_obj.objid.lower()
-        if 'bulge' in name_lower:
-            col_name = '%sBulge' % bandpass
-        elif 'disk' in name_lower:
-            col_name = '%sDisk' % bandpass
-        elif 'agn' in name_lower:
-            col_name = '%sAgn' % bandpass
-        else:
-            raise RuntimeError('Not sure how to get magnitudes for '
-                               'db_obj: %s' % self.db_obj.objid)
-        return self.column_by_name(col_name)
-
+    pass
 
 def CreatePhoSimCatalogs(obs_list,
                          celestial_type=('stars', 'galaxies', 'agn'),
                          catalog_dir=None):
-
-    t_start = time.time()
-    cache_LSST_seds()
-    print "\ndone caching in %e\n" % (time.time()-t_start)
 
     config_name = os.path.join(getPackageDir('sims_integrated'), 'config', 'db.py')
     config = BaseCatalogConfig()

@@ -18,12 +18,12 @@ if __name__ == "__main__":
     gen = ObservationMetaDataGenerator(database=opsimdb)
     obs_list = gen.getObservationMetaData(fieldRA=(52.9, 53.1),
                                           fieldDec=(-27.5, -27.3),
-                                          boundLength=0.5,
+                                          boundLength=0.1,
                                           telescopeFilter='r')
 
     print len(obs_list)
 
     good_obs = [obs_list[0], obs_list[-1]]
 
-    CreatePhoSimCatalogs(good_obs, catalog_dir='trial')
+    CreatePhoSimCatalogs(good_obs, catalog_dir='trial_161201')
     print "that took ",time.time()-t_start
