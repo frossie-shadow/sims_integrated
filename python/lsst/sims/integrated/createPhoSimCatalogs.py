@@ -67,8 +67,22 @@ class ReferenceCatalogBase(object):
 class StellarReferenceCatalog(ReferenceCatalogBase, AstrometryStars, PhotometryStars, InstanceCatalog):
     pass
 
-class GalaxyReferenceCatalog(ReferenceCatalogBase, AstrometryGalaxies, InstanceCatalog):
-    pass
+class GalaxyReferenceCatalog(ReferenceCatalogBase, PhotometryGalaxies, AstrometryGalaxies, InstanceCatalog):
+
+    @cached
+    def get_magnitude(self):
+        bandpass = self.obs_metadata.bandpass
+        name_lower = self.db_obj.objid.lower()
+        if 'bulge' in name_lower:
+            col_name = '%sBulge' % bandpass
+        elif 'disk' in name_lower:
+            col_name = '%sDisk' % bandpass
+        elif 'agn' in name_lower:
+            col_name = '%sAgn' % bandpass
+        else:
+            raise RuntimeError('Not sure how to get magnitudes for '
+                               'db_obj: %s' % self.db_obj.objid)
+        return self.column_by_name(col_name)
 
 
 def CreatePhoSimCatalogs(obs_list,
