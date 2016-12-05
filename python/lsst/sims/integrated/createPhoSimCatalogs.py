@@ -24,25 +24,10 @@ from lsst.sims.catUtils.exampleCatalogDefinitions import (PhoSimCatalogPoint,
 
 __all__ = ["CreatePhoSimCatalogs"]
 
-class VariablePhoSimCatalogPoint(VariabilityStars, PhoSimCatalogPoint):
-    phoSimHeaderMap = DefaultPhoSimHeaderMap
+class PhoSimTrimBase(object):
 
-class VariablePhoSimCatalogZPoint(VariabilityStars, PhoSimCatalogZPoint):
-    phoSimHeaderMap = DefaultPhoSimHeaderMap
-
-class PhoSimCatalogSersic2D_header(PhoSimCatalogSersic2D):
-    phoSimHeaderMap = DefaultPhoSimHeaderMap
-
-class ReferenceCatalogBase(object):
-    column_outputs = ['uniqueId', 'obj_type', 'raICRS', 'decICRS', 'chip', 'xpix', 'ypix']
-    cannot_be_null = ['trim_allowed']
+    cannot_be_null = ['sedFilepath', 'trim_allowed']
     chip_name = None
-
-    transformations = {'raICRS': np.degrees, 'decICRS':np.degrees}
-
-    @cached
-    def get_obj_type(self):
-        return np.array([self.db_obj.objid]*len(self.column_by_name('raJ2000')))
 
     @compound('chip', 'xpix', 'ypix')
     def get_camera_values(self):
@@ -70,16 +55,44 @@ class ReferenceCatalogBase(object):
 
         if self.chip_name is None:
             raise RuntimeError("Cannot perform trimming of InstanceCatalogs; "
-                               "you have not set chip_name in one of your catalogs")
+                               "you have not set chip_name in one of your catalogs: %s " % self.db_obj.objid)
 
         xpix, ypix = pixelCoordsFromPupilCoords(xpup, ypup, chipName=self.chip_name, camera=_lsst_camera)
 
-        chip_radius = np.squart(1999.5**2 + 2035.5**2)
+        chip_radius = np.sqrt(1999.5**2 + 2035.5**2)
 
         distance = np.sqrt((xpix-1999.5)**2 + (ypix-2035.5)**2)
-        allowed_distance = chip_radius + 100.0 + 0.1*np.power(2.5, 17.0-mag)
-        return np.where(np.logical_or(np.char.rfind(name_list, self.chip_name)>=0,
+        allowed_distance = chip_radius + 100.0 + 0.1*np.power(2.5, 17.0-mag_list)
+        return np.where(np.logical_or(np.char.rfind(name_list.astype(str), self.chip_name)>=0,
                                       distance<allowed_distance), 'valid', 'NULL')
+
+
+class VariablePhoSimCatalogPoint(VariabilityStars, PhoSimTrimBase, PhoSimCatalogPoint):
+    phoSimHeaderMap = DefaultPhoSimHeaderMap
+
+class VariablePhoSimCatalogZPoint(VariabilityStars, PhoSimTrimBase, PhoSimCatalogZPoint):
+    phoSimHeaderMap = DefaultPhoSimHeaderMap
+
+class PhoSimCatalogSersic2D_header(PhoSimTrimBase, PhoSimCatalogSersic2D):
+    phoSimHeaderMap = DefaultPhoSimHeaderMap
+
+class ReferenceCatalogBase(object):
+    column_outputs = ['uniqueId', 'obj_type', 'raICRS', 'decICRS', 'chip', 'xpix', 'ypix']
+
+    transformations = {'raICRS': np.degrees, 'decICRS':np.degrees}
+
+    @cached
+    def get_obj_type(self):
+        return np.array([self.db_obj.objid]*len(self.column_by_name('raJ2000')))
+
+    @compound('chip', 'xpix', 'ypix')
+    def get_camera_values(self):
+        xpup = self.column_by_name('x_pupil')
+        ypup = self.column_by_name('y_pupil')
+
+        name_list = chipNameFromPupilCoordsLSST(xpup, ypup)
+        xpix, ypix = pixelCoordsFromPupilCoords(xpup, ypup, chipName=name_list, camera=_lsst_camera)
+        return np.array([name_list, xpix, ypix])
 
 
 class StellarReferenceCatalog(ReferenceCatalogBase, AstrometryStars, PhotometryStars, InstanceCatalog):
@@ -119,6 +132,7 @@ def CreatePhoSimCatalogs(obs_list,
         if 'stars' in celestial_type:
             db = StarObj()
             star_cat = VariablePhoSimCatalogPoint(db, obs_metadata=obs)
+            star_cat.chip_name = 'R:2,2 S:1,1'
             ref_cat = StellarReferenceCatalog(db, obs_metadata=obs)
 
             cat_dict = {cat_name: star_cat, ref_name: ref_cat}
@@ -131,11 +145,9 @@ def CreatePhoSimCatalogs(obs_list,
 
         if 'galaxies' in celestial_type:
 
-            cat_dict = {cat_name: PhoSimCatalogSersic2D_header,
-                        ref_name: GalaxyReferenceCatalog}
-
             for db in (GalaxyBulgeObj(), GalaxyDiskObj()):
                 gal_cat = PhoSimCatalogSersic2D_header(db, obs_metadata=obs)
+                gal_cat.chip_name = 'R:2,2 S:1,1'
                 ref_cat = GalaxyReferenceCatalog(db, obs_metadata=obs)
 
                 cat_dict = {cat_name: gal_cat, ref_name: ref_cat}
@@ -149,6 +161,7 @@ def CreatePhoSimCatalogs(obs_list,
 
             db = GalaxyAgnObj()
             agn_cat = VariablePhoSimCatalogZPoint(db, obs_metadata=obs)
+            agn_cat.chip_name = 'R:2,2 S:1,1'
             ref_cat = GalaxyReferenceCatalog(db, obs_metadata=obs)
             agn_cat._file_name = 'phosim'
             ref_cat._file_name = 'ref'
