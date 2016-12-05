@@ -128,6 +128,7 @@ def CreatePhoSimCatalogs(obs_list,
                                   write_header=write_header, write_mode=write_mode)
             write_header = False
             write_mode = 'a'
+            print 'done with stars'
 
         if 'galaxies' in celestial_type:
 
@@ -145,10 +146,13 @@ def CreatePhoSimCatalogs(obs_list,
 
                 write_header = False
                 write_mode = 'a'
+                print 'done with ',db.objid
 
             db = GalaxyAgnObj()
             agn_cat = VariablePhoSimCatalogZPoint(db, obs_metadata=obs)
             ref_cat = GalaxyReferenceCatalog(db, obs_metadata=obs)
+            agn_cat._file_name = 'phosim'
+            ref_cat._file_name = 'ref'
             cat_dict = {cat_name: agn_cat,
                         ref_name: ref_cat}
 
