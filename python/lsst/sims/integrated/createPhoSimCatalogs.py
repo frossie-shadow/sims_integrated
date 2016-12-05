@@ -70,10 +70,6 @@ class StellarReferenceCatalog(ReferenceCatalogBase, AstrometryStars, PhotometryS
 class GalaxyReferenceCatalog(ReferenceCatalogBase, AstrometryGalaxies, InstanceCatalog):
     pass
 
-celestial_db_dict = {'stars': ([StarObj], [VariablePhoSimCatalogPoint]),
-                     'galaxies': ([GalaxyBulgeObj, GalaxyDiskObj],
-                                  [PhoSimCatalogSersic2D, PhoSimCatalogSersic2D]),
-                     'agn': ([GalaxyAgnObj], [VariablePhoSimCatalogZPoint])}
 
 def CreatePhoSimCatalogs(obs_list,
                          celestial_type=('stars', 'galaxies', 'agn'),
