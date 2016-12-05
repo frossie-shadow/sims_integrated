@@ -114,7 +114,7 @@ def CreatePhoSimCatalogs(obs_list,
 
             cat_dict = {cat_name: star_cat, ref_name: ref_cat}
 
-            parallelCatalogWriter(cat_dict, chunk_size=100000,
+            parallelCatalogWriter(cat_dict, chunk_size=10000,
                                   write_header=write_header, write_mode=write_mode)
             write_header = False
             write_mode = 'a'
@@ -130,7 +130,7 @@ def CreatePhoSimCatalogs(obs_list,
 
                 cat_dict = {cat_name: gal_cat, ref_name: ref_cat}
 
-                parallelCatalogWriter(cat_dict, chunk_size=100000,
+                parallelCatalogWriter(cat_dict, chunk_size=10000,
                                       write_header=write_header, write_mode=write_mode)
 
                 write_header = False
@@ -142,7 +142,7 @@ def CreatePhoSimCatalogs(obs_list,
             cat_dict = {cat_name: agn_cat,
                         ref_name: ref_cat}
 
-            parallelCatalogWriter(cat_dict, chunk_size=100000,
+            parallelCatalogWriter(cat_dict, chunk_size=10000,
                                   write_header=write_header, write_mode=write_mode)
 
         cat_name_list.append(cat_name)
