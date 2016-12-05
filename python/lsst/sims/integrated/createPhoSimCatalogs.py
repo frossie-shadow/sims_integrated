@@ -1,7 +1,9 @@
 import os
 import numpy as np
+import time
 from lsst.utils import getPackageDir
 from lsst.sims.catUtils.exampleCatalogDefinitions import DefaultPhoSimHeaderMap
+from lsst.sims.photUtils import cache_LSST_seds
 
 from lsst.sims.catalogs.definitions import InstanceCatalog
 from lsst.sims.catalogs.decorators import cached, compound
@@ -76,6 +78,10 @@ celestial_db_dict = {'stars': ([StarObj], [VariablePhoSimCatalogPoint]),
 def CreatePhoSimCatalogs(obs_list,
                          celestial_type=('stars', 'galaxies', 'agn'),
                          catalog_dir=None):
+
+    t_start = time.time()
+    cache_LSST_seds()
+    print "\ndone caching in %e\n" % (time.time()-t_start)
 
     config_name = os.path.join(getPackageDir('sims_integrated'), 'config', 'db.py')
     config = BaseCatalogConfig()
