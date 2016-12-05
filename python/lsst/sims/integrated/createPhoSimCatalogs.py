@@ -35,6 +35,8 @@ class PhoSimCatalogSersic2D_header(PhoSimCatalogSersic2D):
 
 class ReferenceCatalogBase(object):
     column_outputs = ['uniqueId', 'obj_type', 'raICRS', 'decICRS', 'chip', 'xpix', 'ypix']
+    cannot_be_null = ['trim_allowed']
+    chip_name = None
 
     transformations = {'raICRS': np.degrees, 'decICRS':np.degrees}
 
@@ -50,6 +52,34 @@ class ReferenceCatalogBase(object):
         name_list = chipNameFromPupilCoordsLSST(xpup, ypup)
         xpix, ypix = pixelCoordsFromPupilCoords(xpup, ypup, chipName=name_list, camera=_lsst_camera)
         return np.array([name_list, xpix, ypix])
+
+    @cached
+    def get_trim_allowed(self):
+        """
+        Return 'allowed' for any objects predicted to be either on the current chip
+        or within 100 + 0.1*2.5^(17-magNorm) pixels of the current chip (this is
+        the buffer applied by PhoSim's trim.cpp)
+        """
+        name_list = self.column_by_name('chip')
+        xpup = self.column_by_name('x_pupil')
+        ypup = self.column_by_name('y_pupil')
+        mag_list = self.column_by_name('magNorm')
+
+        if len(name_list) == 0:
+            return np.array([])
+
+        if self.chip_name is None:
+            raise RuntimeError("Cannot perform trimming of InstanceCatalogs; "
+                               "you have not set chip_name in one of your catalogs")
+
+        xpix, ypix = pixelCoordsFromPupilCoords(xpup, ypup, chipName=self.chip_name, camera=_lsst_camera)
+
+        chip_radius = np.squart(1999.5**2 + 2035.5**2)
+
+        distance = np.sqrt((xpix-1999.5)**2 + (ypix-2035.5)**2)
+        allowed_distance = chip_radius + 100.0 + 0.1*np.power(2.5, 17.0-mag)
+        return np.where(np.logical_or(np.char.rfind(name_list, self.chip_name)>=0,
+                                      distance<allowed_distance), 'valid', 'NULL')
 
 
 class StellarReferenceCatalog(ReferenceCatalogBase, AstrometryStars, PhotometryStars, InstanceCatalog):
