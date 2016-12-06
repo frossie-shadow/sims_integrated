@@ -1,6 +1,7 @@
 import os
 import numpy as np
 from lsst.utils import getPackageDir
+from lsst.afw.cameraGeom import SCIENCE
 from lsst.sims.catUtils.exampleCatalogDefinitions import DefaultPhoSimHeaderMap
 
 from lsst.sims.catalogs.definitions import InstanceCatalog
@@ -101,6 +102,28 @@ class StellarReferenceCatalog(ReferenceCatalogBase, AstrometryStars, PhotometryS
 class GalaxyReferenceCatalog(ReferenceCatalogBase, PhotometryGalaxies, AstrometryGalaxies, InstanceCatalog):
     pass
 
+
+def _append_cat_dict(cat_class, db, obs, cat_dir, cat_dict):
+
+    if not hasattr(_append_cat_dict, 'camera_map'):
+        _append_cat_dict.camera_map = {}
+        for det in _lsst_camera:
+            if det.getType() == SCIENCE:
+                name = det.getName()
+                cat_name = name.strip().replace(':', '_').replace(',', '_').replace(' ','_')
+                _append_cat_dict.camera_map[name] = cat_name
+
+    for chip_name in _append_cat_dict.camera_map:
+        cat = cat_class(db, obs_metadata=obs)
+        cat.chip_name = chip_name
+        safe_name = _append_cat_dict.camera_map[chip_name]
+        file_name = os.path.join(cat_dir,
+                                 'phosim_%s_%.5f.txt' % (safe_name, obs.mjd.TAI))
+
+        cat_dict[file_name] = cat
+
+    return cat_dict
+
 def CreatePhoSimCatalogs(obs_list,
                          celestial_type=('stars', 'galaxies', 'agn'),
                          catalog_dir=None):
@@ -131,11 +154,10 @@ def CreatePhoSimCatalogs(obs_list,
 
         if 'stars' in celestial_type:
             db = StarObj()
-            star_cat = VariablePhoSimCatalogPoint(db, obs_metadata=obs)
-            star_cat.chip_name = 'R:2,2 S:1,1'
             ref_cat = StellarReferenceCatalog(db, obs_metadata=obs)
-
-            cat_dict = {cat_name: star_cat, ref_name: ref_cat}
+            cat_dict = {ref_name: ref_cat}
+            cat_dict = _append_cat_dict(VariablePhoSimCatalogPoint, db, obs,
+                                        cat_dir, cat_dict)
 
             parallelCatalogWriter(cat_dict, chunk_size=10000,
                                   write_header=write_header, write_mode=write_mode)
@@ -146,11 +168,10 @@ def CreatePhoSimCatalogs(obs_list,
         if 'galaxies' in celestial_type:
 
             for db in (GalaxyBulgeObj(), GalaxyDiskObj()):
-                gal_cat = PhoSimCatalogSersic2D_header(db, obs_metadata=obs)
-                gal_cat.chip_name = 'R:2,2 S:1,1'
                 ref_cat = GalaxyReferenceCatalog(db, obs_metadata=obs)
-
-                cat_dict = {cat_name: gal_cat, ref_name: ref_cat}
+                cat_dict = {ref_name: ref_cat}
+                cat_dict = _append_cat_dict(PhoSimCatalogSersic2D_header, db, obs,
+                                            cat_dir, cat_dict)
 
                 parallelCatalogWriter(cat_dict, chunk_size=10000,
                                       write_header=write_header, write_mode=write_mode)
@@ -160,13 +181,10 @@ def CreatePhoSimCatalogs(obs_list,
                 print 'done with ',db.objid
 
             db = GalaxyAgnObj()
-            agn_cat = VariablePhoSimCatalogZPoint(db, obs_metadata=obs)
-            agn_cat.chip_name = 'R:2,2 S:1,1'
             ref_cat = GalaxyReferenceCatalog(db, obs_metadata=obs)
-            agn_cat._file_name = 'phosim'
-            ref_cat._file_name = 'ref'
-            cat_dict = {cat_name: agn_cat,
-                        ref_name: ref_cat}
+            cat_dict = {ref_name: ref_cat}
+            cat_dict = _append_cat_dict(VariablePhoSimCatalogZPoint, db, obs,
+                                        cat_dir, cat_dict)
 
             parallelCatalogWriter(cat_dict, chunk_size=10000,
                                   write_header=write_header, write_mode=write_mode)
