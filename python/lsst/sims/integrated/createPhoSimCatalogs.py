@@ -79,13 +79,19 @@ class PhoSimCatalogSersic2D_header(PhoSimCatalogSersic2D):
 
 class ReferenceCatalogBase(object):
     column_outputs = ['uniqueId', 'obj_type', 'raICRS', 'decICRS',
-                      'chip', 'xpix', 'ypix', 'xpix0', 'ypix0']
+                      'chip', 'xpix', 'ypix', 'xpix0', 'ypix0', 'inst_cat_name']
 
     transformations = {'raICRS': np.degrees, 'decICRS':np.degrees}
+
+    inst_cat_name = None
 
     @cached
     def get_obj_type(self):
         return np.array([self.db_obj.objid]*len(self.column_by_name('raJ2000')))
+
+    @cached
+    def get_inst_cat_name(self):
+        return np.array([self.inst_cat_name]*len(self.column_by_name('raJ2000')))
 
     @compound('chip', 'xpix', 'ypix', 'xpix0', 'ypix0')
     def get_camera_values(self):
@@ -128,7 +134,6 @@ def CreatePhoSimCatalogs(obs_list,
     cat_name_list = []
 
     for obs in obs_list:
-        cat_name = os.path.join(cat_dir, 'phosim_%.5f_cat.txt' % obs.mjd.TAI)
         ref_name = os.path.join(cat_dir, 'phosim_%.5f_ref.txt' % obs.mjd.TAI)
         write_header = True
         write_mode = 'w'
@@ -136,6 +141,8 @@ def CreatePhoSimCatalogs(obs_list,
         if 'stars' in celestial_type:
             db = StarObj()
             ref_cat = StellarReferenceCatalog(db, obs_metadata=obs)
+            cat_name = os.path.join(cat_dir, 'tmp_stars_phosim_%.5f_cat.txt' % obs.mjd.TAI)
+            ref_cat.inst_cat_name = cat_name.split('/')[-1]
             star_cat = VariablePhoSimCatalogPoint(db, obs_metadata=obs)
             cat_dict = {ref_name: ref_cat, cat_name: star_cat}
 
@@ -149,6 +156,8 @@ def CreatePhoSimCatalogs(obs_list,
 
             for db in (GalaxyBulgeObj(), GalaxyDiskObj()):
                 ref_cat = GalaxyReferenceCatalog(db, obs_metadata=obs)
+                cat_name = os.path.join(cat_dir, 'tmp_galaxies_phosim_%.5f_cat.txt' % obs.mjd.TAI)
+                ref_cat.inst_cat_name = cat_name.split('/')[-1]
                 gal_cat = PhoSimCatalogSersic2D_header(db, obs_metadata=obs)
                 cat_dict = {ref_name: ref_cat, cat_name: gal_cat}
 
@@ -161,6 +170,8 @@ def CreatePhoSimCatalogs(obs_list,
 
             db = GalaxyAgnObj()
             ref_cat = GalaxyReferenceCatalog(db, obs_metadata=obs)
+            cat_name = os.path.join(cat_dir, 'tmp_agn_phosim_%.5f_cat.txt' % obs.mjd.TAI)
+            ref_cat.inst_cat_name = cat_name.split('/')[-1]
             gal_cat = VariablePhoSimCatalogZPoint(db, obs_metadata=obs)
             cat_dict = {ref_name: ref_cat, cat_name: gal_cat}
 
