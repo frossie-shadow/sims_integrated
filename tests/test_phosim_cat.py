@@ -23,7 +23,7 @@ if __name__ == "__main__":
 
     print len(obs_list)
 
-    good_obs = [obs_list[0], obs_list[-1]]
+    good_obs = [obs_list[0]]
 
     CreatePhoSimCatalogs(good_obs, catalog_dir='trial_161201')
     print "that took ",time.time()-t_start
