@@ -78,7 +78,8 @@ class PhoSimCatalogSersic2D_header(PhoSimTrimBase, PhoSimCatalogSersic2D):
     phoSimHeaderMap = DefaultPhoSimHeaderMap
 
 class ReferenceCatalogBase(object):
-    column_outputs = ['uniqueId', 'obj_type', 'raICRS', 'decICRS', 'chip', 'xpix', 'ypix']
+    column_outputs = ['uniqueId', 'obj_type', 'raICRS', 'decICRS',
+                      'chip', 'xpix', 'ypix', 'xpix0', 'ypix0']
 
     transformations = {'raICRS': np.degrees, 'decICRS':np.degrees}
 
@@ -86,14 +87,15 @@ class ReferenceCatalogBase(object):
     def get_obj_type(self):
         return np.array([self.db_obj.objid]*len(self.column_by_name('raJ2000')))
 
-    @compound('chip', 'xpix', 'ypix')
+    @compound('chip', 'xpix', 'ypix', 'xpix0', 'ypix0')
     def get_camera_values(self):
         xpup = self.column_by_name('x_pupil')
         ypup = self.column_by_name('y_pupil')
 
         name_list = chipNameFromPupilCoordsLSST(xpup, ypup)
         xpix, ypix = pixelCoordsFromPupilCoords(xpup, ypup, chipName=name_list, camera=_lsst_camera)
-        return np.array([name_list, xpix, ypix])
+        xpix0, ypix0 = pixelCoordsFromPupilCoords(xpup, ypup, chipName='R:2,2 S:1,1', camera=_lsst_camera)
+        return np.array([name_list, xpix, ypix, xpix0, ypix0])
 
 
 class StellarReferenceCatalog(ReferenceCatalogBase, AstrometryStars, PhotometryStars, InstanceCatalog):
