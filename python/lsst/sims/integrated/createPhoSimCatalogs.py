@@ -83,6 +83,8 @@ class ReferenceCatalogBase(object):
 
     transformations = {'raICRS': np.degrees, 'decICRS':np.degrees}
 
+    delimiter = '; '
+
     inst_cat_name = None
 
     @cached
