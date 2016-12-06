@@ -68,13 +68,13 @@ class PhoSimTrimBase(object):
                                       distance<allowed_distance), 'valid', 'NULL')
 
 
-class VariablePhoSimCatalogPoint(VariabilityStars, PhoSimTrimBase, PhoSimCatalogPoint):
+class VariablePhoSimCatalogPoint(VariabilityStars, PhoSimCatalogPoint):
     phoSimHeaderMap = DefaultPhoSimHeaderMap
 
-class VariablePhoSimCatalogZPoint(VariabilityStars, PhoSimTrimBase, PhoSimCatalogZPoint):
+class VariablePhoSimCatalogZPoint(VariabilityStars, PhoSimCatalogZPoint):
     phoSimHeaderMap = DefaultPhoSimHeaderMap
 
-class PhoSimCatalogSersic2D_header(PhoSimTrimBase, PhoSimCatalogSersic2D):
+class PhoSimCatalogSersic2D_header(PhoSimCatalogSersic2D):
     phoSimHeaderMap = DefaultPhoSimHeaderMap
 
 class ReferenceCatalogBase(object):
@@ -104,27 +104,6 @@ class StellarReferenceCatalog(ReferenceCatalogBase, AstrometryStars, PhotometryS
 class GalaxyReferenceCatalog(ReferenceCatalogBase, PhotometryGalaxies, AstrometryGalaxies, InstanceCatalog):
     pass
 
-
-def _append_cat_dict(cat_class, db, obs, cat_dir, cat_dict):
-
-    if not hasattr(_append_cat_dict, 'camera_map'):
-        _append_cat_dict.camera_map = {}
-        for det in _lsst_camera:
-            if det.getType() == SCIENCE:
-                name = det.getName()
-                cat_name = name.strip().replace(':', '_').replace(',', '_').replace(' ','_')
-                _append_cat_dict.camera_map[name] = cat_name
-
-    for chip_name in _append_cat_dict.camera_map:
-        cat = cat_class(db, obs_metadata=obs)
-        cat.chip_name = chip_name
-        safe_name = _append_cat_dict.camera_map[chip_name]
-        file_name = os.path.join(cat_dir,
-                                 'phosim_%s_%.5f.txt' % (safe_name, obs.mjd.TAI))
-
-        cat_dict[file_name] = cat
-
-    return cat_dict
 
 def CreatePhoSimCatalogs(obs_list,
                          celestial_type=('stars', 'galaxies', 'agn'),
@@ -157,9 +136,8 @@ def CreatePhoSimCatalogs(obs_list,
         if 'stars' in celestial_type:
             db = StarObj()
             ref_cat = StellarReferenceCatalog(db, obs_metadata=obs)
-            cat_dict = {ref_name: ref_cat}
-            cat_dict = _append_cat_dict(VariablePhoSimCatalogPoint, db, obs,
-                                        cat_dir, cat_dict)
+            star_cat = VariablePhoSimCatalogPoint(db, obs_metadata=obs)
+            cat_dict = {ref_name: ref_cat, cat_name: star_cat}
 
             parallelCatalogWriter(cat_dict, chunk_size=10000,
                                   write_header=write_header, write_mode=write_mode)
@@ -171,9 +149,8 @@ def CreatePhoSimCatalogs(obs_list,
 
             for db in (GalaxyBulgeObj(), GalaxyDiskObj()):
                 ref_cat = GalaxyReferenceCatalog(db, obs_metadata=obs)
-                cat_dict = {ref_name: ref_cat}
-                cat_dict = _append_cat_dict(PhoSimCatalogSersic2D_header, db, obs,
-                                            cat_dir, cat_dict)
+                gal_cat = PhoSimCatalogSersic2D_header(db, obs_metadata=obs)
+                cat_dict = {ref_name: ref_cat, cat_name: gal_cat}
 
                 parallelCatalogWriter(cat_dict, chunk_size=10000,
                                       write_header=write_header, write_mode=write_mode)
@@ -184,9 +161,8 @@ def CreatePhoSimCatalogs(obs_list,
 
             db = GalaxyAgnObj()
             ref_cat = GalaxyReferenceCatalog(db, obs_metadata=obs)
-            cat_dict = {ref_name: ref_cat}
-            cat_dict = _append_cat_dict(VariablePhoSimCatalogZPoint, db, obs,
-                                        cat_dir, cat_dict)
+            gal_cat = VariablePhoSimCatalogZPoint(db, obs_metadata=obs)
+            cat_dict = {ref_name: ref_cat, cat_name: gal_cat}
 
             parallelCatalogWriter(cat_dict, chunk_size=10000,
                                   write_header=write_header, write_mode=write_mode)
