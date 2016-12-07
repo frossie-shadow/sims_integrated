@@ -66,7 +66,8 @@ class ReferenceCatalogBase(object):
 
         name_list = chipNameFromPupilCoordsLSST(xpup, ypup)
         xpix, ypix = pixelCoordsFromPupilCoords(xpup, ypup, chipName=name_list, camera=_lsst_camera)
-        xpix0, ypix0 = pixelCoordsFromPupilCoords(xpup, ypup, chipName='R:2,2 S:1,1', camera=_lsst_camera)
+        xpix0, ypix0 = pixelCoordsFromPupilCoords(xpup, ypup, chipName='R:2,2 S:1,1', camera=_lsst_camera,
+                                                  includeDistortion=False)
         return np.array([name_list, xpix, ypix, xpix0, ypix0])
 
 
@@ -210,7 +211,8 @@ def CreatePhoSimCatalogs(obs_list, celestial_type=('stars', 'galaxies', 'agn'),
 
                 xpix_0, ypix_0 = pixelCoordsFromRaDecLSST(ra_center, dec_center,
                                                           obs_metadata=obs,
-                                                          chipName='R:2,2 S:1,1')
+                                                          chipName='R:2,2 S:1,1',
+                                                          includeDistortion=False)
 
                 detector_centers[name] = (xpix_0, ypix_0)
 
