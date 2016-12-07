@@ -31,48 +31,6 @@ import time
 
 __all__ = ["CreatePhoSimCatalogs"]
 
-class PhoSimTrimBase(object):
-
-    cannot_be_null = ['sedFilepath', 'trim_allowed']
-    chip_name = None
-
-    @compound('chip', 'xpix', 'ypix')
-    def get_camera_values(self):
-        xpup = self.column_by_name('x_pupil')
-        ypup = self.column_by_name('y_pupil')
-
-        name_list = chipNameFromPupilCoordsLSST(xpup, ypup)
-        xpix, ypix = pixelCoordsFromPupilCoords(xpup, ypup, chipName=name_list, camera=_lsst_camera)
-        return np.array([name_list, xpix, ypix])
-
-    @cached
-    def get_trim_allowed(self):
-        """
-        Return 'allowed' for any objects predicted to be either on the current chip
-        or within 100 + 0.1*2.5^(17-magNorm) pixels of the current chip (this is
-        the buffer applied by PhoSim's trim.cpp)
-        """
-        name_list = self.column_by_name('chip')
-        xpup = self.column_by_name('x_pupil')
-        ypup = self.column_by_name('y_pupil')
-        mag_list = self.column_by_name('magNorm')
-
-        if len(name_list) == 0:
-            return np.array([])
-
-        if self.chip_name is None:
-            raise RuntimeError("Cannot perform trimming of InstanceCatalogs; "
-                               "you have not set chip_name in one of your catalogs: %s " % self.db_obj.objid)
-
-        xpix, ypix = pixelCoordsFromPupilCoords(xpup, ypup, chipName=self.chip_name, camera=_lsst_camera)
-
-        chip_radius = np.sqrt(1999.5**2 + 2035.5**2)
-
-        distance = np.sqrt((xpix-1999.5)**2 + (ypix-2035.5)**2)
-        allowed_distance = chip_radius + 100.0 + 0.1*np.power(2.5, 17.0-mag_list)
-        return np.where(np.logical_or(np.char.rfind(name_list.astype(str), self.chip_name)>=0,
-                                      distance<allowed_distance), 'valid', 'NULL')
-
 
 class VariablePhoSimCatalogPoint(VariabilityStars, PhoSimCatalogPoint):
     phoSimHeaderMap = DefaultPhoSimHeaderMap
@@ -117,6 +75,15 @@ class StellarReferenceCatalog(ReferenceCatalogBase, AstrometryStars, PhotometryS
 
 class GalaxyReferenceCatalog(ReferenceCatalogBase, PhotometryGalaxies, AstrometryGalaxies, InstanceCatalog):
     pass
+
+
+def trim_allowed(name_list, xpix0, ypix0, magnitude, target_name, center):
+
+    chip_radius = np.sqrt(1999.5**2 + 2035.5**2)
+    distance = np.sqrt((xpix0-center[0])**2 + (ypix0-center[1])**2)
+    allowed_distance = chip_radius + 100.0 + 0.1*np.power(2.5, 17.0-magnitude)
+    return np.where(np.logical_or(np.char.rfind(name_list.astype(str), target_name)>=0,
+                                  distance<allowed_distance))
 
 
 def _ref_cat_name_from_obs(obs, cat_dir):
@@ -311,7 +278,14 @@ def CreatePhoSimCatalogs(obs_list, celestial_type=('stars', 'galaxies', 'agn'),
 
                     np.testing.assert_array_equal(local_ref_data['id'], obj_data['id'])
 
+                    for chip_name in detector_centers:
+                        center = detector_centers[chip_name]
+                        in_trim = trim_allowed(local_ref_data['chip'],
+                                               local_ref_data['xpix0'], local_ref_data['ypix0'],
+                                               local_ref_data['magNorm'], chip_name, center)
 
+                        if len(in_trim[0])>0:
+                            print chip_name, len(in_trim[0]), len(local_ref_data)
             print ref_cat,' ',ct_in
 
         print 'that took ',time.time()-t_start
