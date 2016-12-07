@@ -310,9 +310,7 @@ def CreatePhoSimCatalogs(obs_list, celestial_type=('stars', 'galaxies', 'agn'),
 
                         valid_rows = obj_data[in_trim]
                         with open(inst_cat_name, 'a') as file_handle:
-                            for row in valid_rows:
-                                out_data = tuple(vv for vv in row)
-                                file_handle.write(out_fmt % out_data)
+                            file_handle.writelines(out_fmt % tuple(vv for vv in row) for row in valid_rows)
 
                         print chip_name, len(in_trim[0]), len(local_ref_data), temp_cat_name.split('/')[-1]
 
