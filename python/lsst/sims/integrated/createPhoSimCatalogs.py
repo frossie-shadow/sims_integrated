@@ -89,6 +89,10 @@ def trim_allowed(name_list, xpix0, ypix0, magnitude, target_name, center):
 def _ref_cat_name_from_obs(obs, cat_dir):
     return os.path.join(cat_dir, 'phosim_%.5f_ref.txt' % obs.mjd.TAI)
 
+def _inst_cat_name_from_obs(obs, chip_name, cat_dir):
+    mangled_name = chip_name.strip().replace(':', '').replace(',', '').replace(' ', '')
+    return os.path.join(cat_dir, 'phosim_%.5f_%s_cat.txt' % (obs.mjd.TAI, mangled_name))
+
 def _write_base_pho_sim_catalogs(obs,
                                  celestial_type=('stars', 'galaxies', 'agn'),
                                  catalog_dir=None):
@@ -191,6 +195,8 @@ def CreatePhoSimCatalogs(obs_list, celestial_type=('stars', 'galaxies', 'agn'),
                                                                    catalog_dir=cat_dir)
 
 
+        print 'wrote catalog in ',time.time()-t_start
+
         detector_centers = {}
         for det in _lsst_camera:
             if det.getType() == SCIENCE:
@@ -223,6 +229,8 @@ def CreatePhoSimCatalogs(obs_list, celestial_type=('stars', 'galaxies', 'agn'),
                                ('internalDustModel', str, 4), ('galDustModel', str, 10), ('av', float),
                                ('rv', float)])
 
+        star_fmt = '%s %ld %.9g %.9g %.9g %s %d %d %d %d %.9g %.9g %s %s %s %.9g %.9g\n'
+
         agn_dtype = np.dtype([('prefix', str, 10), ('id', long), ('ra', float), ('dec', float),
                               ('magNorm', float), ('sedFilePath', str, 200), ('redshift', float),
                               ('shear1', int), ('shear2', int), ('kappa', int), ('raOffset', float),
@@ -230,13 +238,21 @@ def CreatePhoSimCatalogs(obs_list, celestial_type=('stars', 'galaxies', 'agn'),
                               ('internalDustModel', str, 4), ('galDustModel', str, 10), ('av', float),
                               ('rv', float)])
 
+        agn_fmt = '%s %ld %.9g %.9g %.9g %s %.9g %d %d %d %.9g %.9g %s %s %s %.9g %.9g\n'
+
         gal_dtype = np.dtype([('prefix', str, 10), ('id', long), ('ra', float), ('dec', float),
                               ('magNorm', float), ('sedFilePath', str, 200), ('redshift', float),
                               ('shear1', float), ('shear2', float), ('kappa', float),
                               ('raOffset', float), ('decOffset', float), ('spatialModel', str, 8),
+                              ('major', float), ('minor', float), ('pos_angle', float), ('index', float),
                               ('internalDustModel', str, 4), ('intAv', float), ('intRv', float),
                               ('galDustModel', str, 4), ('galAv', float), ('galRv', float)])
 
+        gal_fmt = '%s %ld %.9g %.9g %.9g %s %.9g %.9g %.9g %.9g %.9g %.9g %s %.9g %.9g %.9g %.9g %s %.9g %.9g %s %.9g %.9g\n'
+
+        db = StarObj()
+        dummy_cat = VariablePhoSimCatalogPoint(db, obs_metadata=obs)
+        inst_cat_written = []
 
         skip_header = 1
         ct_in = 0
@@ -248,31 +264,34 @@ def CreatePhoSimCatalogs(obs_list, celestial_type=('stars', 'galaxies', 'agn'),
             ct_in += len(ref_data)
             skip_header += chunk_size
 
-            inst_cat_list = np.unique(ref_data['cat_name'])
-            for cat_name in inst_cat_list:
-                if 'star' in cat_name:
+            temp_cat_list = np.unique(ref_data['cat_name'])
+            for temp_cat_name in temp_cat_list:
+                if 'star' in temp_cat_name:
                     obj_dtype = star_dtype
-                elif 'agn' in cat_name:
+                    out_fmt = star_fmt
+                elif 'agn' in temp_cat_name:
                     obj_dtype = agn_dtype
-                elif 'gal' in cat_name:
+                    out_fmt = agn_fmt
+                elif 'gal' in temp_cat_name:
                     obj_dtype = gal_dtype
+                    out_fmt = gal_fmt
                 else:
-                    raise RuntimeError('No dtype for %s' % cat_name)
+                    raise RuntimeError('No dtype for %s' % temp_cat_name)
 
-                valid = np.where(np.char.rfind(cat_name, ref_data['cat_name'])>=0)
+                valid = np.where(np.char.rfind(temp_cat_name, ref_data['cat_name'])>=0)
                 local_ref_data = ref_data[valid]
 
-                if cat_name not in catalogs_read:
-                    catalogs_read.append(cat_name)
-                    obj_skip_dict[cat_name] = 0
+                if temp_cat_name not in catalogs_read:
+                    catalogs_read.append(temp_cat_name)
+                    obj_skip_dict[temp_cat_name] = 0
 
                 max_rows = len(local_ref_data)
-                obj_skip = obj_skip_dict[cat_name]
+                obj_skip = obj_skip_dict[temp_cat_name]
 
-                obj_data = np.genfromtxt(os.path.join(cat_dir, cat_name), dtype=obj_dtype, delimiter=' ',
+                obj_data = np.genfromtxt(os.path.join(cat_dir, temp_cat_name), dtype=obj_dtype, delimiter=' ',
                                          skip_header=obj_skip, max_rows=max_rows)
 
-                obj_skip_dict[cat_name] += max_rows
+                obj_skip_dict[temp_cat_name] += max_rows
 
                 np.testing.assert_array_equal(local_ref_data['id'], obj_data['id'])
 
@@ -283,7 +302,20 @@ def CreatePhoSimCatalogs(obs_list, celestial_type=('stars', 'galaxies', 'agn'),
                                            local_ref_data['magNorm'], chip_name, center)
 
                     if len(in_trim[0])>0:
-                        print chip_name, len(in_trim[0]), len(local_ref_data)
+                        inst_cat_name = _inst_cat_name_from_obs(obs, chip_name, cat_dir)
+                        if inst_cat_name not in inst_cat_written:
+                            inst_cat_written.append(inst_cat_name)
+                            with open(inst_cat_name, 'w') as file_handle:
+                                dummy_cat.write_header(file_handle)
+
+                        valid_rows = obj_data[in_trim]
+                        with open(inst_cat_name, 'a') as file_handle:
+                            for row in valid_rows:
+                                out_data = tuple(vv for vv in row)
+                                file_handle.write(out_fmt % out_data)
+
+                        print chip_name, len(in_trim[0]), len(local_ref_data), temp_cat_name.split('/')[-1]
+
         print ref_name,' ',ct_in
 
         print 'that took ',time.time()-t_start
