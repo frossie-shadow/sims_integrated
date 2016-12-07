@@ -1,3 +1,4 @@
+setupRequired(sconsUtils)
 setupRequired(utils)
 setupRequired(sims_utils)
 setupRequired(sims_coordUtils)
