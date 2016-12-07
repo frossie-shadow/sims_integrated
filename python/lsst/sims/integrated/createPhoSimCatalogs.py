@@ -79,6 +79,38 @@ class GalaxyReferenceCatalog(ReferenceCatalogBase, PhotometryGalaxies, Astrometr
 
 
 def trim_allowed(name_list, xpix0, ypix0, magnitude, target_name, center):
+    """
+    Return a numpy.where() tuple indicating the objects from a list that are within
+    a reasonable distance of a given chip.  "Reasonable distance" is defined such
+    as to be consistent with how PhoSim's trim.cpp works: sources are accepted if
+    they are within 100 pixels of the chip being considered, or if they are within
+
+    0.1 * 2.5^(17.0 - mag)
+
+    pixels of that bound.
+
+    Parameters
+    ----------
+    name_list is a numpy array listing the names of the chips CatSim predicts
+    that the sources actually land on
+
+    xpix0, ypix0 are the TAN_PIXEL positions of the objects on the 'R:2,2 S:1,1' chip
+    (i.e. the central detector)
+
+    magnitude is a numpy array of the magNorms of the objects
+
+    target_name is the name of the chip being considered (e.g. 'R:2,1 S:0,0')
+
+    center is a tuple containing the TAN_PIXEL position of the center of the current
+    chip relative to the 'R:2,2 S:1,1' chip.  Comparing this point to xpix0, ypix0 is
+    how the method determines if an object is close and bright enough to cast scattered
+    light on the detector (again, following PhoSim's prescription)
+
+    Output
+    ------
+    The result of numpy.where(), indicating which of the input objects should be included
+    in the input chip's InstanceCatalog
+    """
 
     chip_radius = np.sqrt(1999.5**2 + 2035.5**2)
     distance = np.sqrt((xpix0-center[0])**2 + (ypix0-center[1])**2)
