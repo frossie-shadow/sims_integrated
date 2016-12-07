@@ -183,16 +183,15 @@ def CreatePhoSimCatalogs(obs_list, celestial_type=('stars', 'galaxies', 'agn'),
         db_class.database = config.database
         db_class.driver = config.driver
 
-    pkg_dir = getPackageDir('sims_integrated')
-    cat_dir = os.path.join(pkg_dir, 'catalogs')
-    if catalog_dir is not None:
-        cat_dir = os.path.join(cat_dir, catalog_dir)
-        if not os.path.exists(cat_dir):
-            os.mkdir(cat_dir)
+    if catalog_dir is None:
+        raise RuntimeError("Need to specify directory to put catalogs in")
+
+    if not os.path.exists(catalog_dir):
+        os.mkdir(catalog_dir)
 
     for obs in obs_list:
         ref_name, catalog_name_list = _write_base_pho_sim_catalogs(obs, celestial_type=celestial_type,
-                                                                   catalog_dir=cat_dir)
+                                                                   catalog_dir=catalog_dir)
 
 
         print 'wrote catalog in ',time.time()-t_start
@@ -288,7 +287,7 @@ def CreatePhoSimCatalogs(obs_list, celestial_type=('stars', 'galaxies', 'agn'),
                 max_rows = len(local_ref_data)
                 obj_skip = obj_skip_dict[temp_cat_name]
 
-                obj_data = np.genfromtxt(os.path.join(cat_dir, temp_cat_name), dtype=obj_dtype, delimiter=' ',
+                obj_data = np.genfromtxt(os.path.join(catalog_dir, temp_cat_name), dtype=obj_dtype, delimiter=' ',
                                          skip_header=obj_skip, max_rows=max_rows)
 
                 obj_skip_dict[temp_cat_name] += max_rows
@@ -302,7 +301,7 @@ def CreatePhoSimCatalogs(obs_list, celestial_type=('stars', 'galaxies', 'agn'),
                                            local_ref_data['magNorm'], chip_name, center)
 
                     if len(in_trim[0])>0:
-                        inst_cat_name = _inst_cat_name_from_obs(obs, chip_name, cat_dir)
+                        inst_cat_name = _inst_cat_name_from_obs(obs, chip_name, catalog_dir)
                         if inst_cat_name not in inst_cat_written:
                             inst_cat_written.append(inst_cat_name)
                             with open(inst_cat_name, 'w') as file_handle:
