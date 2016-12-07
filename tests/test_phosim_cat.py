@@ -22,7 +22,7 @@ if __name__ == "__main__":
     gen = ObservationMetaDataGenerator(database=opsimdb)
     obs_list = gen.getObservationMetaData(fieldRA=(52.9, 53.1),
                                           fieldDec=(-27.5, -27.3),
-                                          boundLength=0.3,
+                                          boundLength=0.1,
                                           telescopeFilter='r')
 
     print len(obs_list)
