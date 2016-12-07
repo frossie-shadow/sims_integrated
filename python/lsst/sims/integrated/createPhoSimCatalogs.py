@@ -93,7 +93,7 @@ def _write_base_pho_sim_catalogs(obs,
                                  celestial_type=('stars', 'galaxies', 'agn'),
                                  catalog_dir=None):
 
-    catalog_name_dict = {}
+    catalog_name_list = []
 
     ref_name = _ref_cat_name_from_obs(obs, catalog_dir)
     if os.path.exists(ref_name):
@@ -104,7 +104,6 @@ def _write_base_pho_sim_catalogs(obs,
     with open(ref_name, 'w') as file_handle:
         ref_cat.write_header(file_handle)
 
-    catalog_name_dict[ref_name] = []
     write_header = False
     write_mode = 'a'
 
@@ -114,7 +113,7 @@ def _write_base_pho_sim_catalogs(obs,
         cat_name = os.path.join(catalog_dir, 'tmp_stars_phosim_%.5f_cat.txt' % obs.mjd.TAI)
         if os.path.exists(cat_name):
             os.unlink(cat_name)
-        catalog_name_dict[ref_name].append(cat_name)
+        catalog_name_list.append(cat_name)
         ref_cat.inst_cat_name = cat_name.split('/')[-1]
         star_cat = VariablePhoSimCatalogPoint(db, obs_metadata=obs)
         star_cat.phoSimHeaderMap = {}
@@ -132,7 +131,7 @@ def _write_base_pho_sim_catalogs(obs,
         if os.path.exists(cat_name):
             os.unlink(cat_name)
 
-        catalog_name_dict[ref_name].append(cat_name)
+        catalog_name_list.append(cat_name)
 
         for db in (GalaxyBulgeObj(), GalaxyDiskObj()):
             ref_cat = GalaxyReferenceCatalog(db, obs_metadata=obs)
@@ -154,7 +153,7 @@ def _write_base_pho_sim_catalogs(obs,
         cat_name = os.path.join(catalog_dir, 'tmp_agn_phosim_%.5f_cat.txt' % obs.mjd.TAI)
         if os.path.exists(cat_name):
             os.unlink(cat_name)
-        catalog_name_dict[ref_name].append(cat_name)
+        catalog_name_list.append(cat_name)
         ref_cat.inst_cat_name = cat_name.split('/')[-1]
         gal_cat = VariablePhoSimCatalogZPoint(db, obs_metadata=obs)
         gal_cat.phoSimHeaderMap = {}
@@ -163,7 +162,7 @@ def _write_base_pho_sim_catalogs(obs,
         parallelCatalogWriter(cat_dict, chunk_size=100000,
                               write_header=write_header, write_mode=write_mode)
 
-    return catalog_name_dict
+    return ref_name, catalog_name_list
 
 
 def CreatePhoSimCatalogs(obs_list, celestial_type=('stars', 'galaxies', 'agn'),
@@ -188,8 +187,8 @@ def CreatePhoSimCatalogs(obs_list, celestial_type=('stars', 'galaxies', 'agn'),
             os.mkdir(cat_dir)
 
     for obs in obs_list:
-        catalog_name_dict = _write_base_pho_sim_catalogs(obs, celestial_type=celestial_type,
-                                                         catalog_dir=cat_dir)
+        ref_name, catalog_name_list = _write_base_pho_sim_catalogs(obs, celestial_type=celestial_type,
+                                                                   catalog_dir=cat_dir)
 
 
         detector_centers = {}
@@ -239,53 +238,52 @@ def CreatePhoSimCatalogs(obs_list, celestial_type=('stars', 'galaxies', 'agn'),
                               ('galDustModel', str, 4), ('galAv', float), ('galRv', float)])
 
 
-        for ref_cat in catalog_name_dict:
-            skip_header = 1
-            ct_in = 0
-            catalogs_written = []
-            obj_skip_dict = {}
-            while skip_header == 1 or len(ref_data) == chunk_size:
-                ref_data = np.genfromtxt(ref_cat, dtype=ref_dtype, delimiter='; ',
-                                         skip_header=skip_header, max_rows=chunk_size)
-                ct_in += len(ref_data)
-                skip_header += chunk_size
+        skip_header = 1
+        ct_in = 0
+        catalogs_read = []
+        obj_skip_dict = {}
+        while skip_header == 1 or len(ref_data) == chunk_size:
+            ref_data = np.genfromtxt(ref_name, dtype=ref_dtype, delimiter='; ',
+                                     skip_header=skip_header, max_rows=chunk_size)
+            ct_in += len(ref_data)
+            skip_header += chunk_size
 
-                inst_cat_list = np.unique(ref_data['cat_name'])
-                for cat_name in inst_cat_list:
-                    if 'star' in cat_name:
-                        obj_dtype = star_dtype
-                    elif 'agn' in cat_name:
-                        obj_dtype = agn_dtype
-                    elif 'gal' in cat_name:
-                        obj_dtype = gal_dtype
-                    else:
-                        raise RuntimeError('No dtype for %s' % cat_name)
+            inst_cat_list = np.unique(ref_data['cat_name'])
+            for cat_name in inst_cat_list:
+                if 'star' in cat_name:
+                    obj_dtype = star_dtype
+                elif 'agn' in cat_name:
+                    obj_dtype = agn_dtype
+                elif 'gal' in cat_name:
+                    obj_dtype = gal_dtype
+                else:
+                    raise RuntimeError('No dtype for %s' % cat_name)
 
-                    valid = np.where(np.char.rfind(cat_name, ref_data['cat_name'])>=0)
-                    local_ref_data = ref_data[valid]
+                valid = np.where(np.char.rfind(cat_name, ref_data['cat_name'])>=0)
+                local_ref_data = ref_data[valid]
 
-                    if cat_name not in catalogs_written:
-                        catalogs_written.append(cat_name)
-                        obj_skip_dict[cat_name] = 0
+                if cat_name not in catalogs_read:
+                    catalogs_read.append(cat_name)
+                    obj_skip_dict[cat_name] = 0
 
-                    max_rows = len(local_ref_data)
-                    obj_skip = obj_skip_dict[cat_name]
+                max_rows = len(local_ref_data)
+                obj_skip = obj_skip_dict[cat_name]
 
-                    obj_data = np.genfromtxt(os.path.join(cat_dir, cat_name), dtype=obj_dtype, delimiter=' ',
-                                             skip_header=obj_skip, max_rows=max_rows)
+                obj_data = np.genfromtxt(os.path.join(cat_dir, cat_name), dtype=obj_dtype, delimiter=' ',
+                                         skip_header=obj_skip, max_rows=max_rows)
 
-                    obj_skip_dict[cat_name] += max_rows
+                obj_skip_dict[cat_name] += max_rows
 
-                    np.testing.assert_array_equal(local_ref_data['id'], obj_data['id'])
+                np.testing.assert_array_equal(local_ref_data['id'], obj_data['id'])
 
-                    for chip_name in detector_centers:
-                        center = detector_centers[chip_name]
-                        in_trim = trim_allowed(local_ref_data['chip'],
-                                               local_ref_data['xpix0'], local_ref_data['ypix0'],
-                                               local_ref_data['magNorm'], chip_name, center)
+                for chip_name in detector_centers:
+                    center = detector_centers[chip_name]
+                    in_trim = trim_allowed(local_ref_data['chip'],
+                                           local_ref_data['xpix0'], local_ref_data['ypix0'],
+                                           local_ref_data['magNorm'], chip_name, center)
 
-                        if len(in_trim[0])>0:
-                            print chip_name, len(in_trim[0]), len(local_ref_data)
-            print ref_cat,' ',ct_in
+                    if len(in_trim[0])>0:
+                        print chip_name, len(in_trim[0]), len(local_ref_data)
+        print ref_name,' ',ct_in
 
         print 'that took ',time.time()-t_start
