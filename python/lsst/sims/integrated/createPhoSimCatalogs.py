@@ -264,7 +264,7 @@ def CreatePhoSimCatalogs(obs_list, celestial_type=('stars', 'galaxies', 'agn'),
             ct_in += len(ref_data)
             skip_header += chunk_size
 
-            temp_cat_list = np.unique(ref_data['cat_name'])
+            temp_cat_list = np.sort(np.unique(ref_data['cat_name']))[::-1]
             for temp_cat_name in temp_cat_list:
                 if 'star' in temp_cat_name:
                     obj_dtype = star_dtype
