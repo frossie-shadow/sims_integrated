@@ -203,18 +203,18 @@ def _write_base_pho_sim_catalogs(obs,
 
 
 def create_phosim_catalogs(obs_list, celestial_type=('stars', 'galaxies', 'agn'),
-                           catalog_dir=None):
+                           catalog_dir=None, db_config=None):
 
     t_start = time.time()
 
-    config_name = os.path.join(getPackageDir('sims_integrated'), 'config', 'db.py')
-    config = BaseCatalogConfig()
-    config.load(config_name)
-    for db_class in (StarObj, GalaxyBulgeObj, GalaxyDiskObj, GalaxyAgnObj):
-        db_class.host = config.host
-        db_class.port = config.port
-        db_class.database = config.database
-        db_class.driver = config.driver
+    if db_config is not None:
+        config = BaseCatalogConfig()
+        config.load(db_config)
+        for db_class in (StarObj, GalaxyBulgeObj, GalaxyDiskObj, GalaxyAgnObj):
+            db_class.host = config.host
+            db_class.port = config.port
+            db_class.database = config.database
+            db_class.driver = config.driver
 
     if catalog_dir is None:
         raise RuntimeError("Need to specify directory to put catalogs in")
