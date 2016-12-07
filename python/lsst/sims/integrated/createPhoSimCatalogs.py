@@ -81,7 +81,7 @@ def trim_allowed(name_list, xpix0, ypix0, magnitude, target_name, center):
 
     chip_radius = np.sqrt(1999.5**2 + 2035.5**2)
     distance = np.sqrt((xpix0-center[0])**2 + (ypix0-center[1])**2)
-    allowed_distance = chip_radius + 100.0 + 0.1*np.power(2.5, 17.0-magnitude)
+    allowed_distance = chip_radius + 1100.0 + 0.1*np.power(2.5, 17.0-magnitude)
     return np.where(np.logical_or(np.char.rfind(name_list.astype(str), target_name)>=0,
                                   distance<allowed_distance))
 
