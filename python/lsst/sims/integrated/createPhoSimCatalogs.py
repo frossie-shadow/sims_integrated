@@ -153,7 +153,7 @@ def _write_base_pho_sim_catalogs(obs,
         star_cat.phoSimHeaderMap = {}
         cat_dict = {ref_name: ref_cat, cat_name: star_cat}
 
-        parallelCatalogWriter(cat_dict, chunk_size=10000,
+        parallelCatalogWriter(cat_dict, chunk_size=100000,
                               write_header=write_header, write_mode=write_mode)
         write_mode = 'a'
         write_header = False
@@ -175,7 +175,7 @@ def _write_base_pho_sim_catalogs(obs,
             gal_cat.phoSimHeaderMap = {}
             cat_dict = {ref_name: ref_cat, cat_name: gal_cat}
 
-            parallelCatalogWriter(cat_dict, chunk_size=10000,
+            parallelCatalogWriter(cat_dict, chunk_size=100000,
                                   write_header=write_header, write_mode=write_mode)
 
             write_header = False
@@ -193,7 +193,7 @@ def _write_base_pho_sim_catalogs(obs,
         gal_cat.phoSimHeaderMap = {}
         cat_dict = {ref_name: ref_cat, cat_name: gal_cat}
 
-        parallelCatalogWriter(cat_dict, chunk_size=10000,
+        parallelCatalogWriter(cat_dict, chunk_size=100000,
                               write_header=write_header, write_mode=write_mode)
 
     return catalog_name_dict
@@ -244,7 +244,7 @@ def CreatePhoSimCatalogs(obs_list, celestial_type=('stars', 'galaxies', 'agn'),
                 detector_centers[name] = (xpix_0, ypix_0)
 
         # code to read in the reference catalog
-        chunk_size = 1000
+        chunk_size = 100000
         ref_dtype = np.dtype([('id', long), ('type', str, 100), ('ra', float), ('dec', float),
                               ('chip', str, 100), ('xpix', float), ('ypix', float),
                               ('xpix0', float), ('ypix0', float), ('magNorm', float),
