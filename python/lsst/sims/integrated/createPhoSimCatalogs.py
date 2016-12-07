@@ -29,7 +29,7 @@ from lsst.sims.coordUtils import getCornerRaDec
 
 import time
 
-__all__ = ["CreatePhoSimCatalogs"]
+__all__ = ["create_phosim_catalogs", "trim_allowed"]
 
 
 class VariablePhoSimCatalogPoint(VariabilityStars, PhoSimCatalogPoint):
@@ -202,8 +202,8 @@ def _write_base_pho_sim_catalogs(obs,
     return ref_name, catalog_name_list
 
 
-def CreatePhoSimCatalogs(obs_list, celestial_type=('stars', 'galaxies', 'agn'),
-                         catalog_dir=None):
+def create_phosim_catalogs(obs_list, celestial_type=('stars', 'galaxies', 'agn'),
+                           catalog_dir=None):
 
     t_start = time.time()
 

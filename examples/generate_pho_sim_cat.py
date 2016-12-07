@@ -1,5 +1,5 @@
 from lsst.sims.catUtils.utils import ObservationMetaDataGenerator
-from lsst.sims.integrated import CreatePhoSimCatalogs
+from lsst.sims.integrated import create_phosim_catalogs
 from lsst.utils import getPackageDir
 
 import os
@@ -29,5 +29,5 @@ if __name__ == "__main__":
 
     good_obs = [obs_list[0]]
 
-    CreatePhoSimCatalogs(good_obs, catalog_dir=cat_dir)
+    create_phosim_catalogs(good_obs, catalog_dir=cat_dir)
     print "that took ",time.time()-t_start
