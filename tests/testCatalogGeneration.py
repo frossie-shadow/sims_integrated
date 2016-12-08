@@ -185,8 +185,8 @@ class PhoSimCatalogCreationTestCase(unittest.TestCase):
                         TestGalaxyDiskObj: (GalaxyReferenceCatalog, TestPhoSimSersic2D),
                         TestAgnObj: (GalaxyReferenceCatalog, TestPhoSimZPoint)}
 
-        create_phosim_catalogs([self.obs], catalog_dir=catalog_dir, db_config=self.config_name,
-                               catalog_dict=catalog_dict)
+        ref_cat_name_list = create_phosim_catalogs([self.obs], catalog_dir=catalog_dir,
+                                                   db_config=self.config_name, catalog_dict=catalog_dict)
 
         for det in _lsst_camera:
             if det.getType() != SCIENCE:
@@ -243,6 +243,10 @@ class PhoSimCatalogCreationTestCase(unittest.TestCase):
 
             if os.path.exists(control_cat_name):
                 os.unlink(control_cat_name)
+
+        for name in ref_cat_name_list:
+            if os.path.exists(name):
+                os.unlink(name)
 
 
 class MemoryTestClass(lsst.utils.tests.MemoryTestCase):
