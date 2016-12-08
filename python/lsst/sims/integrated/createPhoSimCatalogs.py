@@ -223,6 +223,9 @@ def create_phosim_catalogs(obs_list, catalog_dir=None, db_config=None,
 
     t_start = time.time()
 
+    if catalog_dir is None:
+        raise RuntimeError("You must specify a catalog_dir for create_phosim_catalogs()")
+
     if db_config is not None:
         config = BaseCatalogConfig()
         config.load(db_config)
