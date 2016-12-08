@@ -27,17 +27,6 @@ from lsst.sims.integrated import (StellarReferenceCatalog, GalaxyReferenceCatalo
                                   VariablePhoSimCatalogPoint, VariablePhoSimCatalogZPoint,
                                   PhoSimCatalogSersic2D_header)
 
-_connected_to_fatboy = True
-
-try:
-    from lsst.sims.catUtils.baseCatalogModels import StarObj
-    _test_db = StarObj()
-except RuntimeError as ee:
-    if 'To connect to the UW CATSIM database' in ee.message:
-        _connected_to_fatboy = False
-    else:
-        raise
-
 class TestDBObj(object):
 
     def query_columns(*args, **kwargs):
