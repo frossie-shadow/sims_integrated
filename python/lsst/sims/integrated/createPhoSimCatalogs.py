@@ -215,6 +215,8 @@ def create_phosim_catalogs(obs_list, catalog_dir=None, db_config=None,
     ------
     A list of the reference catalogs corresponding to your ObservationMetaDatas.
 
+    A list of the PhoSim InstanceCatalogs created.
+
     All catalogs will be written to the specified catalog_dir
 
     db_config is a config file controlling how to connect to the database containing your astronomical
@@ -379,4 +381,4 @@ def create_phosim_catalogs(obs_list, catalog_dir=None, db_config=None,
 
         print 'that took ', time.time()-t_start
 
-    return ref_name_list
+    return ref_name_list, inst_cat_written

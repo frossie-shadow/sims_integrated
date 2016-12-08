@@ -185,8 +185,8 @@ class PhoSimCatalogCreationTestCase(unittest.TestCase):
                         TestGalaxyDiskObj: (GalaxyReferenceCatalog, TestPhoSimSersic2D),
                         TestAgnObj: (GalaxyReferenceCatalog, TestPhoSimZPoint)}
 
-        ref_cat_name_list = create_phosim_catalogs([self.obs], catalog_dir=catalog_dir,
-                                                   db_config=self.config_name, catalog_dict=catalog_dict)
+        ref_cat_name_list, inst_name_list = create_phosim_catalogs([self.obs], catalog_dir=catalog_dir,
+                                                                   db_config=self.config_name, catalog_dict=catalog_dict)
 
         for det in _lsst_camera:
             if det.getType() != SCIENCE:
@@ -219,6 +219,8 @@ class PhoSimCatalogCreationTestCase(unittest.TestCase):
 
             if os.path.exists(test_cat_name):
 
+                self.assertIn(test_cat_name, inst_name_list)
+
                 with open(test_cat_name, 'r') as file_handle:
                     test_lines = file_handle.readlines()
 
@@ -232,6 +234,8 @@ class PhoSimCatalogCreationTestCase(unittest.TestCase):
 
                 os.unlink(test_cat_name)
             else:
+                self.assertNotIn(test_cat_name, inst_name_list)
+
                 with open(control_cat_name, 'r') as file_handle:
                     control_lines = file_handle.readlines()
 
