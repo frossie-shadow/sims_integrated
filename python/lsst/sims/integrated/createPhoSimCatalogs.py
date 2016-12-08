@@ -141,8 +141,9 @@ def _write_base_pho_sim_catalogs(obs,
     if os.path.exists(ref_name):
         os.unlink(ref_name)
 
-    db = StarObj()
-    ref_cat = StellarReferenceCatalog(db, obs_metadata=obs)
+    db_class = list(catalog_dict.keys())[0]
+    db = db_class()
+    ref_cat = catalog_dict[db_class][0](db, obs_metadata=obs)
     with open(ref_name, 'w') as file_handle:
         ref_cat.write_header(file_handle)
 
@@ -163,8 +164,6 @@ def _write_base_pho_sim_catalogs(obs,
         local_cat_dict = {ref_name: ref_cat, cat_name: obj_cat}
         parallelCatalogWriter(local_cat_dict, chunk_size=100000,
                               write_header=write_header, write_mode=write_mode)
-        write_mode = 'a'
-        write_header = False
 
     return ref_name, catalog_name_list
 
@@ -253,8 +252,9 @@ def create_phosim_catalogs(obs_list, catalog_dir=None, db_config=None,
 
         gal_fmt = '%s %ld %.9g %.9g %.9g %s %.9g %.9g %.9g %.9g %.9g %.9g %s %.9g %.9g %.9g %.9g %s %.9g %.9g %s %.9g %.9g\n'
 
-        db = StarObj()
-        dummy_cat = VariablePhoSimCatalogPoint(db, obs_metadata=obs)
+        db_class = list(catalog_dict.keys())[0]
+        db = db_class()
+        dummy_cat = catalog_dict[db_class][1](db, obs_metadata=obs)
         inst_cat_written = []
 
         skip_header = 1
