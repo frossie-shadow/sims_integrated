@@ -34,7 +34,7 @@ class TestDBObj(object):
 
     def _get_column_query(*args, **kwargs):
         return CatalogDBObject._get_column_query(*args, **kwargs)
-    
+
     def _final_pass(*args, **kwargs):
         return CatalogDBObject._final_pass(*args, **kwargs)
 
@@ -71,7 +71,7 @@ class TestPhoSimZPoint(TestVariabilityMixin, VariablePhoSimCatalogZPoint):
     pass
 
 class TestPhoSimSersic2D(TestVariabilityMixin, PhoSimCatalogSersic2D_header):
-    pass   
+    pass
 
 class PhoSimControl(object):
     phoSimHeaderMap = DefaultPhoSimHeaderMap
