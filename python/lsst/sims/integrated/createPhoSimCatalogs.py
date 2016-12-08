@@ -178,6 +178,48 @@ def create_phosim_catalogs(obs_list, catalog_dir=None, db_config=None,
                                          GalaxyBulgeObj: (GalaxyReferenceCatalog, PhoSimCatalogSersic2D_header),
                                          GalaxyDiskObj: (GalaxyReferenceCatalog, PhoSimCatalogSersic2D_header),
                                          GalaxyAgnObj: (GalaxyReferenceCatalog, VariablePhoSimCatalogZPoint)}):
+    """
+    Take a list of ObservationMetaData.  For each, construct a reference catalog containing all of the
+    objects in the field of view and a series of PhoSim InstanceCatalogs, one per LSST detector.  Objects
+    will be included in the PhoSim InstanceCatalogs according to the following rule:
+
+    If CatSim predicts that the object is on the detector, include it.
+    If CatSim predicts that the object is within 1100 + 0.1*2.5^(17-magNorm) pixels of the chip, include it.
+
+    The second criterion is there to account for two facts:
+
+    - PhoSim and CatSim implement refraction differently and thus disagree slightly on where objects
+    fall on the focal plane.
+
+    - Bright objects that are not strictly on a chip may still cast scattered light on that chip, and thus
+    need to be simulated.
+
+    The resulting catalogs will be written out to the specified directory.  The reference catalog will have
+    a name like phosim_$MJD_ref.txt.  The InstanceCatalogs will have names like phosim_$MJD_$chipName_cat.txt
+
+    Parameters
+    ----------
+    obs_list is a list of ObservationMetaData describing your observations
+
+    catalog_dir is the directory where you want catalogs to be written
+
+    catalog_dict is a dict.  They keys of the dicts are the CatalogDBObject class (not instantiations of
+    those classes) used for connecting to the database tables of your astronomical objects.  The values
+    are two-element tuples.  The first element is the class for the reference catalog (either
+    StellarReferenceCatalog or GalaxyReferenceCatalog, imported from sims_integrated).  The second element
+    is the class for the PhoSim InstanceCatalog (we recommend VariablePhoSimCatalogPoint for galactic point
+    sources, VariablePhoSimCatalogZPoint for extra-galactic point sources, and PhoSimCatalogSersic2D_header
+    for 2-dimensional sersic profile-like objects; these can all be imported from sims_integrated).
+
+    Output
+    ------
+    A list of the reference catalogs corresponding to your ObservationMetaDatas.
+
+    All catalogs will be written to the specified catalog_dir
+
+    db_config is a config file controlling how to connect to the database containing your astronomical
+    objects (this is optional; see sims_catUtils/config/db.py for an example)
+    """
 
     t_start = time.time()
 
