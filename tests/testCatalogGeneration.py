@@ -9,7 +9,6 @@ from lsst.utils import getPackageDir
 from lsst.afw.cameraGeom import SCIENCE
 from lsst.sims.integrated import trim_allowed, create_phosim_catalogs
 from lsst.sims.catalogs.definitions import CompoundInstanceCatalog
-from lsst.sims.utils import ObservationMetaData
 from lsst.sims.coordUtils import pixelCoordsFromPupilCoords, getCornerRaDec, _lsst_camera
 from lsst.sims.coordUtils import chipNameFromPupilCoordsLSST
 from lsst.sims.coordUtils import pixelCoordsFromRaDecLSST
@@ -28,6 +27,7 @@ from lsst.sims.integrated import (StellarReferenceCatalog, GalaxyReferenceCatalo
                                   VariablePhoSimCatalogPoint, VariablePhoSimCatalogZPoint,
                                   PhoSimCatalogSersic2D_header)
 
+
 class TestDBObj(object):
 
     def query_columns(*args, **kwargs):
@@ -41,9 +41,7 @@ class TestDBObj(object):
 
 
 class TestStarObj(TestDBObj, StarObj, CatalogDBObject):
-    #These types should be matched to the database.
-    #: Default map is float.  If the column mapping is the same as the column name, None can be specified
-    columns = [('id','simobjid', int),
+    columns = [('id', 'simobjid', int),
                ('raJ2000', 'ra*PI()/180.'),
                ('decJ2000', 'decl*PI()/180.'),
                ('glon', 'gal_l*PI()/180.'),
@@ -56,23 +54,30 @@ class TestStarObj(TestDBObj, StarObj, CatalogDBObject):
                ('variabilityParameters', 'varParamStr', str, 256),
                ('sedFilename', 'sedfilename', unicode, 40)]
 
+
 class TestGalaxyBulgeObj(TestDBObj, GalaxyBulgeObj, CatalogDBObject):
     pass
+
 
 class TestGalaxyDiskObj(TestDBObj, GalaxyDiskObj, CatalogDBObject):
     pass
 
+
 class TestAgnObj(TestDBObj, GalaxyAgnObj, CatalogDBObject):
     pass
+
 
 class TestPhoSimPoint(TestVariabilityMixin, VariablePhoSimCatalogPoint):
     pass
 
+
 class TestPhoSimZPoint(TestVariabilityMixin, VariablePhoSimCatalogZPoint):
     pass
 
+
 class TestPhoSimSersic2D(TestVariabilityMixin, PhoSimCatalogSersic2D_header):
     pass
+
 
 class PhoSimControl(object):
     phoSimHeaderMap = DefaultPhoSimHeaderMap
@@ -91,11 +96,11 @@ class PhoSimControl(object):
         if not hasattr(self, 'chip_center'):
             corners = getCornerRaDec(self.chip_name, _lsst_camera, self.obs_metadata,
                                      includeDistortion=False)
-            ra_center = 0.25*(corners[0][0] + corners[1][0]
-                              + corners[2][0] + corners[3][0])
+            ra_center = 0.25*(corners[0][0] + corners[1][0] +
+                              corners[2][0] + corners[3][0])
 
-            dec_center = 0.25*(corners[0][1] + corners[1][1]
-                               + corners[2][1] + corners[3][1])
+            dec_center = 0.25*(corners[0][1] + corners[1][1] +
+                               corners[2][1] + corners[3][1])
 
             self.chip_center = pixelCoordsFromRaDecLSST(ra_center, dec_center,
                                                         obs_metadata=self.obs_metadata,
@@ -235,7 +240,6 @@ class PhoSimCatalogCreationTestCase(unittest.TestCase):
                 for line in control_lines:
                     self.assertEqual(len(line.split()), 2,
                                      msg='There should be a catalog for %s, but there is not' % chip_name)
-
 
             if os.path.exists(control_cat_name):
                 os.unlink(control_cat_name)
