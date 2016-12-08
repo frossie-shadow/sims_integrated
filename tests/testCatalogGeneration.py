@@ -6,6 +6,7 @@ import numpy as np
 import lsst.utils.tests
 from lsst.sims.utils.CodeUtilities import sims_clean_up
 from lsst.utils import getPackageDir
+from lsst.afw.cameraGeom import SCIENCE
 from lsst.sims.integrated import trim_allowed, create_phosim_catalogs
 from lsst.sims.catalogs.definitions import CompoundInstanceCatalog
 from lsst.sims.utils import ObservationMetaData
@@ -183,32 +184,35 @@ class PhoSimCatalogCreationTestCase(unittest.TestCase):
                                catalog_dict=catalog_dict)
 
         for det in _lsst_camera:
+            if det.getType() != SCIENCE:
+                continue
+
             chip_name = det.getName()
             mangled_name = chip_name.strip().replace(':', '').replace(',', '').replace(' ', '')
             test_cat_name = os.path.join(catalog_dir,
                                          'phosim_%.5f_%s_cat.txt' % (self.obs.mjd.TAI,
                                                                      mangled_name))
 
+            control_cat = CompoundInstanceCatalog([PhoSimStarControl,
+                                                   PhoSimGalControl,
+                                                   PhoSimGalControl,
+                                                   PhoSimAgnControl],
+                                                  [TestStarObj, TestGalaxyBulgeObj,
+                                                   TestGalaxyDiskObj, TestAgnObj],
+                                                  obs_metadata=self.obs)
+
+            control_cat.phoSimHeaderMap = DefaultPhoSimHeaderMap
+            control_cat.chip_name = chip_name
+
+            control_cat_name = os.path.join(self.scratch_dir,
+                                            "phosim_creation_control_catalog.txt")
+
+            if os.path.exists(control_cat_name):
+                os.unlink(control_cat_name)
+
+            control_cat.write_catalog(control_cat_name)
+
             if os.path.exists(test_cat_name):
-
-                control_cat = CompoundInstanceCatalog([PhoSimStarControl,
-                                                       PhoSimGalControl,
-                                                       PhoSimGalControl,
-                                                       PhoSimAgnControl],
-                                                      [TestStarObj, TestGalaxyBulgeObj,
-                                                       TestGalaxyDiskObj, TestAgnObj],
-                                                      obs_metadata=self.obs)
-
-                control_cat.phoSimHeaderMap = DefaultPhoSimHeaderMap
-                control_cat.chip_name = chip_name
-
-                control_cat_name = os.path.join(self.scratch_dir,
-                                                "phosim_creation_control_catalog.txt")
-
-                if os.path.exists(control_cat_name):
-                    os.unlink(control_cat_name)
-
-                control_cat.write_catalog(control_cat_name)
 
                 with open(test_cat_name, 'r') as file_handle:
                     test_lines = file_handle.readlines()
@@ -221,8 +225,21 @@ class PhoSimCatalogCreationTestCase(unittest.TestCase):
                 for line in test_lines:
                     self.assertIn(line, control_lines, msg='%s\n not in control' % line)
 
-                if os.path.exists(control_cat_name):
-                    os.unlink(control_cat_name)
+                os.unlink(test_cat_name)
+            else:
+                with open(control_cat_name, 'r') as file_handle:
+                    control_lines = file_handle.readlines()
+
+                # verify that the only lines in the control PhoSim catalog
+                # are header lines
+                for line in control_lines:
+                    self.assertEqual(len(line.split()), 2,
+                                     msg='There should be a catalog for %s, but there is not' % chip_name)
+
+
+            if os.path.exists(control_cat_name):
+                os.unlink(control_cat_name)
+
 
 class MemoryTestClass(lsst.utils.tests.MemoryTestCase):
     pass
