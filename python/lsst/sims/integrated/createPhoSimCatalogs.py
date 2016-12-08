@@ -148,6 +148,7 @@ def _write_base_pho_sim_catalogs(obs,
     db_class = list(catalog_dict.keys())[0]
     db = db_class()
     ref_cat = catalog_dict[db_class][0](db, obs_metadata=obs)
+    ref_cat.delimiter = '; '
     with open(ref_name, 'w') as file_handle:
         ref_cat.write_header(file_handle)
 
