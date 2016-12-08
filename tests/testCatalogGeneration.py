@@ -132,6 +132,14 @@ class PhoSimCatalogCreationTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+
+        for db_class in (TestAgnObj, TestGalaxyBulgeObj, TestGalaxyDiskObj):
+            for ix in range(len(db_class.columns)):
+                if db_class.columns[ix] == ('raJ2000', 'ra'):
+                    db_class.columns[ix] = ('raJ2000', 'ra*PI()/180.0')
+                if db_class.columns[ix] == ('decJ2000', 'dec'):
+                    db_class.columns[ix] = ('decJ2000', 'dec*PI()/180.0')
+
         pkg_dir = getPackageDir('sims_integrated')
         cls.scratch_dir = os.path.join(pkg_dir, 'tests', 'scratchSpace')
 
@@ -139,7 +147,7 @@ class PhoSimCatalogCreationTestCase(unittest.TestCase):
         if os.path.exists(cls.db_name):
             os.unlink(cls.db_name)
 
-        cls.obs = makePhoSimTestDB(filename=cls.db_name, size=10000, seedVal=8123361,
+        cls.obs = makePhoSimTestDB(filename=cls.db_name, size=1000, seedVal=8123361,
                                    radius = 2.0)
 
         cls.config_name = os.path.join(cls.scratch_dir, 'sims_integrated_test_config.py')
@@ -181,39 +189,40 @@ class PhoSimCatalogCreationTestCase(unittest.TestCase):
                                          'phosim_%.5f_%s_cat.txt' % (self.obs.mjd.TAI,
                                                                      mangled_name))
 
-            control_cat = CompoundInstanceCatalog([PhoSimStarControl,
-                                                   PhoSimGalControl,
-                                                   PhoSimGalControl,
-                                                   PhoSimAgnControl],
-                                                  [TestStarObj, TestGalaxyBulgeObj,
-                                                   TestGalaxyDiskObj, TestAgnObj],
-                                                  obs_metadata=self.obs)
+            if os.path.exists(test_cat_name):
 
-            control_cat.phoSimHeaderMap = DefaultPhoSimHeaderMap
-            control_cat.chip_name = chip_name
+                control_cat = CompoundInstanceCatalog([PhoSimStarControl,
+                                                       PhoSimGalControl,
+                                                       PhoSimGalControl,
+                                                       PhoSimAgnControl],
+                                                      [TestStarObj, TestGalaxyBulgeObj,
+                                                       TestGalaxyDiskObj, TestAgnObj],
+                                                      obs_metadata=self.obs)
 
-            control_cat_name = os.path.join(self.scratch_dir,
-                                            "phosim_creation_control_catalog.txt")
+                control_cat.phoSimHeaderMap = DefaultPhoSimHeaderMap
+                control_cat.chip_name = chip_name
 
-            if os.path.exists(control_cat_name):
-                os.unlink(control_cat_name)
+                control_cat_name = os.path.join(self.scratch_dir,
+                                                "phosim_creation_control_catalog.txt")
 
-            control_cat.write_catalog(control_cat_name)
+                if os.path.exists(control_cat_name):
+                    os.unlink(control_cat_name)
 
-            with open(test_cat_name, 'r') as file_handle:
-                test_lines = file_handle.readlines()
+                control_cat.write_catalog(control_cat_name)
 
-            with open(control_cat_name, 'r') as file_handle:
-                control_lines = file_handle.readlines()
+                with open(test_cat_name, 'r') as file_handle:
+                    test_lines = file_handle.readlines()
 
-            for line in test_lines:
-                self.assertIn(line, control_lines, msg='%s\n not in control' % line)
+                with open(control_cat_name, 'r') as file_handle:
+                    control_lines = file_handle.readlines()
 
-            for line in control_lines:
-                self.assertIn(line, test_lines, msg='%s\n not in test' % line)
+                self.assertEqual(len(test_lines), len(control_lines))
 
-            if os.path.exists(control_cat_name):
-                os.unlink(control_cat_name)
+                for line in test_lines:
+                    self.assertIn(line, control_lines, msg='%s\n not in control' % line)
+
+                if os.path.exists(control_cat_name):
+                    os.unlink(control_cat_name)
 
 class MemoryTestClass(lsst.utils.tests.MemoryTestCase):
     pass
