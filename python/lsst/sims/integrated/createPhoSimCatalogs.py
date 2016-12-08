@@ -1,7 +1,6 @@
 from __future__ import with_statement
 import os
 import numpy as np
-from lsst.utils import getPackageDir
 from lsst.afw.cameraGeom import SCIENCE
 from lsst.sims.catUtils.exampleCatalogDefinitions import DefaultPhoSimHeaderMap
 
@@ -21,7 +20,6 @@ from lsst.sims.catUtils.baseCatalogModels import (BaseCatalogConfig, StarObj,
 from lsst.sims.catUtils.mixins import VariabilityStars
 from lsst.sims.catUtils.mixins import AstrometryStars, AstrometryGalaxies
 from lsst.sims.catUtils.mixins import PhotometryStars, PhotometryGalaxies
-from lsst.sims.photUtils import Sed
 from lsst.sims.coordUtils import chipNameFromPupilCoordsLSST, pixelCoordsFromRaDecLSST
 from lsst.sims.coordUtils import pixelCoordsFromPupilCoords
 from lsst.sims.coordUtils import _lsst_camera
@@ -40,17 +38,20 @@ __all__ = ["create_phosim_catalogs", "trim_allowed",
 class VariablePhoSimCatalogPoint(VariabilityStars, PhoSimCatalogPoint):
     phoSimHeaderMap = DefaultPhoSimHeaderMap
 
+
 class VariablePhoSimCatalogZPoint(VariabilityStars, PhoSimCatalogZPoint):
     phoSimHeaderMap = DefaultPhoSimHeaderMap
 
+
 class PhoSimCatalogSersic2D_header(PhoSimCatalogSersic2D):
     phoSimHeaderMap = DefaultPhoSimHeaderMap
+
 
 class ReferenceCatalogBase(object):
     column_outputs = ['uniqueId', 'obj_type', 'raICRS', 'decICRS',
                       'chip', 'xpix', 'ypix', 'xpix0', 'ypix0', 'magNorm', 'inst_cat_name']
 
-    transformations = {'raICRS': np.degrees, 'decICRS':np.degrees}
+    transformations = {'raICRS': np.degrees, 'decICRS': np.degrees}
 
     delimiter = '; '
 
@@ -78,6 +79,7 @@ class ReferenceCatalogBase(object):
 
 class StellarReferenceCatalog(ReferenceCatalogBase, AstrometryStars, PhotometryStars, InstanceCatalog):
     pass
+
 
 class GalaxyReferenceCatalog(ReferenceCatalogBase, PhotometryGalaxies, AstrometryGalaxies, InstanceCatalog):
     pass
@@ -120,16 +122,18 @@ def trim_allowed(name_list, xpix0, ypix0, magnitude, target_name, center):
     chip_radius = np.sqrt(1999.5**2 + 2035.5**2)
     distance = np.sqrt((xpix0-center[0])**2 + (ypix0-center[1])**2)
     allowed_distance = chip_radius + 1100.0 + 0.1*np.power(2.5, 17.0-magnitude)
-    return np.where(np.logical_or(np.char.rfind(name_list.astype(str), target_name)>=0,
-                                  distance<allowed_distance))
+    return np.where(np.logical_or(np.char.rfind(name_list.astype(str), target_name) >= 0,
+                                  distance < allowed_distance))
 
 
 def _ref_cat_name_from_obs(obs, cat_dir):
     return os.path.join(cat_dir, 'phosim_%.5f_ref.txt' % obs.mjd.TAI)
 
+
 def _inst_cat_name_from_obs(obs, chip_name, cat_dir):
     mangled_name = chip_name.strip().replace(':', '').replace(',', '').replace(' ', '')
     return os.path.join(cat_dir, 'phosim_%.5f_%s_cat.txt' % (obs.mjd.TAI, mangled_name))
+
 
 def _write_base_pho_sim_catalogs(obs,
                                  catalog_dict={},
@@ -152,7 +156,7 @@ def _write_base_pho_sim_catalogs(obs,
 
     for i_cat, db_class in enumerate(catalog_dict):
         db = db_class()
-        print 'doing ',db.objid
+        print 'doing ', db.objid
         ref_cat = catalog_dict[db_class][0](db, obs_metadata=obs)
         cat_name = os.path.join(catalog_dir, 'tmp_cat_%s_%.5f_%d.txt' % (db.objid, obs.mjd.TAI, i_cat))
         if os.path.exists(cat_name):
@@ -197,10 +201,9 @@ def create_phosim_catalogs(obs_list, catalog_dir=None, db_config=None,
         ref_name, temp_cat_name_list = _write_base_pho_sim_catalogs(obs, catalog_dict=catalog_dict,
                                                                     catalog_dir=catalog_dir)
 
-
         ref_name_list.append(ref_name)
 
-        print 'wrote catalog in ',time.time()-t_start
+        print 'wrote catalog in ', time.time()-t_start
 
         detector_centers = {}
         for det in _lsst_camera:
@@ -208,11 +211,11 @@ def create_phosim_catalogs(obs_list, catalog_dir=None, db_config=None,
                 name = det.getName()
                 corners = getCornerRaDec(name, _lsst_camera, obs, includeDistortion=False)
 
-                ra_center = 0.25*(corners[0][0] + corners[1][0]
-                                  + corners[2][0] + corners[3][0])
+                ra_center = 0.25*(corners[0][0] + corners[1][0] +
+                                  corners[2][0] + corners[3][0])
 
-                dec_center = 0.25*(corners[0][1] + corners[1][1]
-                                   + corners[2][1] + corners[3][1])
+                dec_center = 0.25*(corners[0][1] + corners[1][1] +
+                                   corners[2][1] + corners[3][1])
 
                 xpix_0, ypix_0 = pixelCoordsFromRaDecLSST(ra_center, dec_center,
                                                           obs_metadata=obs,
@@ -254,7 +257,8 @@ def create_phosim_catalogs(obs_list, catalog_dir=None, db_config=None,
                               ('internalDustModel', str, 4), ('intAv', float), ('intRv', float),
                               ('galDustModel', str, 4), ('galAv', float), ('galRv', float)])
 
-        gal_fmt = '%s %ld %.9g %.9g %.9g %s %.9g %.9g %.9g %.9g %.9g %.9g %s %.9g %.9g %.9g %.9g %s %.9g %.9g %s %.9g %.9g\n'
+        gal_fmt = ('%s %ld %.9g %.9g %.9g %s %.9g %.9g %.9g %.9g %.9g %.9g %s '
+                   '%.9g %.9g %.9g %.9g %s %.9g %.9g %s %.9g %.9g\n')
 
         db_class = list(catalog_dict.keys())[0]
         db = db_class()
@@ -285,7 +289,7 @@ def create_phosim_catalogs(obs_list, catalog_dir=None, db_config=None,
                 else:
                     raise RuntimeError('No dtype for %s' % temp_cat_name)
 
-                valid = np.where(np.char.rfind(temp_cat_name, ref_data['cat_name'])>=0)
+                valid = np.where(np.char.rfind(temp_cat_name, ref_data['cat_name']) >= 0)
                 local_ref_data = ref_data[valid]
 
                 if temp_cat_name not in catalogs_read:
@@ -295,8 +299,8 @@ def create_phosim_catalogs(obs_list, catalog_dir=None, db_config=None,
                 max_rows = len(local_ref_data)
                 obj_skip = obj_skip_dict[temp_cat_name]
 
-                obj_data = np.genfromtxt(os.path.join(catalog_dir, temp_cat_name), dtype=obj_dtype, delimiter=' ',
-                                         skip_header=obj_skip, max_rows=max_rows)
+                obj_data = np.genfromtxt(os.path.join(catalog_dir, temp_cat_name), dtype=obj_dtype,
+                                         delimiter=' ', skip_header=obj_skip, max_rows=max_rows)
 
                 obj_skip_dict[temp_cat_name] += max_rows
 
@@ -308,7 +312,7 @@ def create_phosim_catalogs(obs_list, catalog_dir=None, db_config=None,
                                            local_ref_data['xpix0'], local_ref_data['ypix0'],
                                            local_ref_data['magNorm'], chip_name, center)
 
-                    if len(in_trim[0])>0:
+                    if len(in_trim[0]) > 0:
                         inst_cat_name = _inst_cat_name_from_obs(obs, chip_name, catalog_dir)
                         if inst_cat_name not in inst_cat_written:
                             inst_cat_written.append(inst_cat_name)
@@ -325,8 +329,8 @@ def create_phosim_catalogs(obs_list, catalog_dir=None, db_config=None,
             if os.path.exists(temp_cat_name):
                 os.unlink(temp_cat_name)
 
-        print ref_name,' ',ct_in
+        print ref_name, ' ', ct_in
 
-        print 'that took ',time.time()-t_start
+        print 'that took ', time.time()-t_start
 
     return ref_name_list
