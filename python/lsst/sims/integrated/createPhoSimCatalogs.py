@@ -191,10 +191,14 @@ def create_phosim_catalogs(obs_list, catalog_dir=None, db_config=None,
     if not os.path.exists(catalog_dir):
         os.mkdir(catalog_dir)
 
-    for obs in obs_list:
-        ref_name, catalog_name_list = _write_base_pho_sim_catalogs(obs, catalog_dict=catalog_dict,
-                                                                   catalog_dir=catalog_dir)
+    ref_name_list = []
 
+    for obs in obs_list:
+        ref_name, temp_cat_name_list = _write_base_pho_sim_catalogs(obs, catalog_dict=catalog_dict,
+                                                                    catalog_dir=catalog_dir)
+
+
+        ref_name_list.append(ref_name)
 
         print 'wrote catalog in ',time.time()-t_start
 
@@ -317,6 +321,12 @@ def create_phosim_catalogs(obs_list, catalog_dir=None, db_config=None,
 
                         print chip_name, len(in_trim[0]), len(local_ref_data), temp_cat_name.split('/')[-1]
 
+        for temp_cat_name in temp_cat_name_list:
+            if os.path.exists(temp_cat_name):
+                os.unlink(temp_cat_name)
+
         print ref_name,' ',ct_in
 
         print 'that took ',time.time()-t_start
+
+    return ref_name_list
