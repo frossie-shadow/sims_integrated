@@ -148,7 +148,7 @@ class PhoSimCatalogCreationTestCase(unittest.TestCase):
         if os.path.exists(cls.db_name):
             os.unlink(cls.db_name)
 
-        cls.obs = makePhoSimTestDB(filename=cls.db_name, size=1000, seedVal=8123361,
+        cls.obs = makePhoSimTestDB(filename=cls.db_name, size=100, seedVal=8123361,
                                    radius = 2.0)
 
         cls.config_name = os.path.join(cls.scratch_dir, 'sims_integrated_test_config.py')
