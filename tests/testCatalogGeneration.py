@@ -149,13 +149,13 @@ class PhoSimCatalogCreationTestCase(unittest.TestCase):
             file_handle.write("config.port='None'\n")
             file_handle.write("config.database='%s'\n" % cls.db_name)
 
-    #@classmethod
-    #def tearDownClass(cls):
-    #    sims_clean_up()
-    #    if os.path.exists(cls.db_name):
-    #        os.unlink(cls.db_name)
-    #    if os.path.exists(cls.config_name):
-    #        os.unlink(cls.config_name)
+    @classmethod
+    def tearDownClass(cls):
+        sims_clean_up()
+        #if os.path.exists(cls.db_name):
+        #    os.unlink(cls.db_name)
+        if os.path.exists(cls.config_name):
+            os.unlink(cls.config_name)
 
     def test_catalog_generation(self):
         """
