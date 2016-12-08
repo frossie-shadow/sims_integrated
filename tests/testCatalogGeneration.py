@@ -160,8 +160,8 @@ class PhoSimCatalogCreationTestCase(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         sims_clean_up()
-        #if os.path.exists(cls.db_name):
-        #    os.unlink(cls.db_name)
+        if os.path.exists(cls.db_name):
+            os.unlink(cls.db_name)
         if os.path.exists(cls.config_name):
             os.unlink(cls.config_name)
 
