@@ -6,6 +6,9 @@ from lsst.utils import getPackageDir
 def create_bash_scripts(catalog_dir, n_per_batch, output_dir, batch_dir,
                         physics_file=None, db_config=None):
 
+    if not os.path.exists(batch_dir):
+        os.mkdir(batch_dir)
+
     sed_dir = getPackageDir('sims_sed_library')
 
     inst_cat_list = os.listdir(catalog_dir)
