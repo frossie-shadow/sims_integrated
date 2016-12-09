@@ -244,6 +244,7 @@ def create_phosim_catalogs(obs_list, catalog_dir=None, db_config=None,
         os.mkdir(catalog_dir)
 
     ref_name_list = []
+    inst_cat_written = []
 
     for obs in obs_list:
         ref_name, temp_cat_name_list = _write_base_pho_sim_catalogs(obs, catalog_dict=catalog_dict,
@@ -311,7 +312,6 @@ def create_phosim_catalogs(obs_list, catalog_dir=None, db_config=None,
         db_class = list(catalog_dict.keys())[0]
         db = db_class()
         dummy_cat = catalog_dict[db_class][1](db, obs_metadata=obs)
-        inst_cat_written = []
 
         skip_header = 1
         ct_in = 0
